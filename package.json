@@ -1,0 +1,53 @@
+{
+  "name": "app-bridge-keeper",
+  "version": "1.0.0",
+  "description": "Bridge keeper is intended to be an backend app that manage access to whatever service you need",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "nest build",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "jest --config ./test/jest-e2e.json"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@nestjs/common": "^11.1.9",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^11.1.9",
+    "@nestjs/platform-express": "^11.1.9",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "stytch": "^12.43.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.14",
+    "@nestjs/schematics": "^11.0.9",
+    "@nestjs/testing": "^11.1.9",
+    "@types/express": "^5.0.5",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.10.1",
+    "@types/supertest": "^6.0.3",
+    "@typescript-eslint/eslint-plugin": "^8.48.0",
+    "@typescript-eslint/parser": "^8.48.0",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "jest": "^30.2.0",
+    "prettier": "^3.7.2",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.5",
+    "ts-loader": "^9.5.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
