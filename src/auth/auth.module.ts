@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
-import { StytchService } from './stytch.service';
-import { STYTCH_CONFIG } from '../config/stytch.config';
+import { AuthService } from './auth.service.js';
+import { AuthController } from './auth.controller.js';
+import { StytchService } from './stytch.service.js';
+import { STYTCH_CONFIG } from '../config/stytch.config.js';
 
 @Module({
   imports: [ConfigModule],

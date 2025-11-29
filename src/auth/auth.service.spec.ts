@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { StytchService } from './stytch.service';
+import { AuthService } from './auth.service.js';
+import { StytchService } from './stytch.service.js';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -11,7 +11,7 @@ describe('AuthService', () => {
     authenticateMagicLink: jest.fn(),
     authenticateSession: jest.fn(),
     revokeSession: jest.fn(),
-    getMember: jest.fn(),
+    getUser: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -75,8 +75,7 @@ describe('AuthService', () => {
       const token = 'magic-link-token';
       const mockResponse = {
         session_token: 'session-token',
-        member_id: 'member-123',
-        organization_id: 'org-123',
+        user_id: 'user-123',
       };
 
       mockStytchService.authenticateMagicLink.mockResolvedValue(mockResponse);
@@ -84,8 +83,7 @@ describe('AuthService', () => {
       const result = await service.authenticateMagicLink(token);
 
       expect(result.sessionToken).toBe('session-token');
-      expect(result.memberId).toBe('member-123');
-      expect(result.organizationId).toBe('org-123');
+      expect(result.userId).toBe('user-123');
       expect(result.expiresAt).toBeInstanceOf(Date);
     });
 
@@ -102,14 +100,9 @@ describe('AuthService', () => {
     it('should validate session successfully', async () => {
       const token = 'session-token';
       const mockResponse = {
-        session_token: 'session-token',
-        member: {
-          member_id: 'member-123',
-        },
-        organization: {
-          organization_id: 'org-123',
-        },
-        member_session: {
+        session: {
+          session_id: 'session-123',
+          user_id: 'user-123',
           expires_at: '2024-12-31T23:59:59Z',
         },
       };
@@ -118,9 +111,8 @@ describe('AuthService', () => {
 
       const result = await service.validateSession(token);
 
-      expect(result.sessionToken).toBe('session-token');
-      expect(result.memberId).toBe('member-123');
-      expect(result.organizationId).toBe('org-123');
+      expect(result.sessionToken).toBe('session-123');
+      expect(result.userId).toBe('user-123');
     });
 
     it('should throw UnauthorizedException on invalid session', async () => {
@@ -149,34 +141,33 @@ describe('AuthService', () => {
     });
   });
 
-  describe('getMemberInfo', () => {
-    it('should get member info successfully', async () => {
-      const mockMember = {
-        member: {
-          member_id: 'member-123',
-          email_address: 'test@example.com',
-          status: 'active',
-          name: 'Test User',
-          organization_id: 'org-123',
-        },
+  describe('getUserInfo', () => {
+    it('should get user info successfully', async () => {
+      const mockUser = {
+        user_id: 'user-123',
+        emails: [
+          {
+            email: 'test@example.com',
+          },
+        ],
+        status: 'active',
+        name: 'Test User',
       };
 
-      mockStytchService.getMember.mockResolvedValue(mockMember);
+      mockStytchService.getUser.mockResolvedValue(mockUser);
 
-      const result = await service.getMemberInfo('org-123', 'member-123');
+      const result = await service.getUserInfo('user-123');
 
-      expect(result.memberId).toBe('member-123');
+      expect(result.userId).toBe('user-123');
       expect(result.email).toBe('test@example.com');
       expect(result.status).toBe('active');
       expect(result.name).toBe('Test User');
     });
 
     it('should throw UnauthorizedException on failure', async () => {
-      mockStytchService.getMember.mockRejectedValue(new Error('Member not found'));
+      mockStytchService.getUser.mockRejectedValue(new Error('User not found'));
 
-      await expect(service.getMemberInfo('org-123', 'member-123')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(service.getUserInfo('user-123')).rejects.toThrow(UnauthorizedException);
     });
   });
 });

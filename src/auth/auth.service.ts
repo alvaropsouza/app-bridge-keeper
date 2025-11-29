@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
-import { StytchService } from './stytch.service';
+import { StytchService } from './stytch.service.js';
 
 export class LoginDto {
   @ApiProperty({

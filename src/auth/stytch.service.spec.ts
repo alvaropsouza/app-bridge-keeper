@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { StytchService } from './stytch.service';
-import { STYTCH_CONFIG } from '../config/stytch.config';
+import { StytchService } from './stytch.service.js';
+import { STYTCH_CONFIG } from '../config/stytch.config.js';
 
 describe('StytchService', () => {
   let service: StytchService;
@@ -35,9 +35,9 @@ describe('StytchService', () => {
   describe('sendMagicLink', () => {
     it('should throw error when client is not initialized', async () => {
       const serviceWithoutClient = new StytchService({ projectId: '', secret: '' });
-      await expect(
-        serviceWithoutClient.sendMagicLink('test@example.com', 'org-123'),
-      ).rejects.toThrow('Stytch client not initialized');
+      await expect(serviceWithoutClient.sendMagicLink('test@example.com')).rejects.toThrow(
+        'Stytch client not initialized',
+      );
     });
   });
 
@@ -68,10 +68,10 @@ describe('StytchService', () => {
     });
   });
 
-  describe('getMember', () => {
+  describe('getUser', () => {
     it('should throw error when client is not initialized', async () => {
       const serviceWithoutClient = new StytchService({ projectId: '', secret: '' });
-      await expect(serviceWithoutClient.getMember('org-123', 'member-123')).rejects.toThrow(
+      await expect(serviceWithoutClient.getUser('user-123')).rejects.toThrow(
         'Stytch client not initialized',
       );
     });

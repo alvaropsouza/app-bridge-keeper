@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "ES2022",
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
@@ -12,6 +12,7 @@
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
+    "moduleResolution": "node",
     // Note: These are relaxed for NestJS compatibility and rapid development
     // Consider enabling these for stricter type checking in production:
     // - strictNullChecks: true

@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import * as stytch from 'stytch';
-import { STYTCH_CONFIG, StytchConfig } from '../config/stytch.config';
+import { STYTCH_CONFIG, StytchConfig } from '../config/stytch.config.js';
 
 @Injectable()
 export class StytchService {
