@@ -1,0 +1,219 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { UnauthorizedException } from '@nestjs/common';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+
+describe('AuthController', () => {
+  let controller: AuthController;
+
+  const mockAuthService = {
+    initiateLogin: jest.fn(),
+    authenticateMagicLink: jest.fn(),
+    validateSession: jest.fn(),
+    logout: jest.fn(),
+    getMemberInfo: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [AuthController],
+      providers: [
+        {
+          provide: AuthService,
+          useValue: mockAuthService,
+        },
+      ],
+    }).compile();
+
+    controller = module.get<AuthController>(AuthController);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
+
+  describe('login', () => {
+    it('should initiate login', async () => {
+      const loginDto = {
+        email: 'test@example.com',
+        organizationId: 'org-123',
+      };
+
+      const mockResult = {
+        success: true,
+        message: 'Magic link sent successfully',
+        requestId: 'req-123',
+      };
+
+      mockAuthService.initiateLogin.mockResolvedValue(mockResult);
+
+      const result = await controller.login(loginDto);
+
+      expect(result).toEqual(mockResult);
+      expect(mockAuthService.initiateLogin).toHaveBeenCalledWith(loginDto);
+    });
+  });
+
+  describe('authenticate', () => {
+    it('should authenticate with magic link', async () => {
+      const authenticateDto = {
+        token: 'magic-link-token',
+        type: 'magic_link' as const,
+      };
+
+      const mockResult = {
+        sessionToken: 'session-token',
+        memberId: 'member-123',
+        organizationId: 'org-123',
+        expiresAt: new Date(),
+      };
+
+      mockAuthService.authenticateMagicLink.mockResolvedValue(mockResult);
+
+      const result = await controller.authenticate(authenticateDto);
+
+      expect(result).toEqual(mockResult);
+      expect(mockAuthService.authenticateMagicLink).toHaveBeenCalledWith(authenticateDto.token);
+    });
+
+    it('should authenticate with session token', async () => {
+      const authenticateDto = {
+        token: 'session-token',
+        type: 'session' as const,
+      };
+
+      const mockResult = {
+        sessionToken: 'session-token',
+        memberId: 'member-123',
+        organizationId: 'org-123',
+        expiresAt: new Date(),
+      };
+
+      mockAuthService.validateSession.mockResolvedValue(mockResult);
+
+      const result = await controller.authenticate(authenticateDto);
+
+      expect(result).toEqual(mockResult);
+      expect(mockAuthService.validateSession).toHaveBeenCalledWith(authenticateDto.token);
+    });
+
+    it('should throw UnauthorizedException for invalid type', async () => {
+      const authenticateDto = {
+        token: 'token',
+        type: 'invalid' as any,
+      };
+
+      await expect(controller.authenticate(authenticateDto)).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('logout', () => {
+    it('should logout successfully', async () => {
+      const authorization = 'Bearer session-token';
+      const mockResult = {
+        success: true,
+        message: 'Session revoked successfully',
+      };
+
+      mockAuthService.logout.mockResolvedValue(mockResult);
+
+      const result = await controller.logout(authorization);
+
+      expect(result).toEqual(mockResult);
+      expect(mockAuthService.logout).toHaveBeenCalledWith('session-token');
+    });
+
+    it('should throw UnauthorizedException when no authorization header', async () => {
+      await expect(controller.logout(undefined)).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('getMe', () => {
+    it('should get member info with organization header', async () => {
+      const authorization = 'Bearer session-token';
+      const organizationId = 'org-123';
+
+      const mockSession = {
+        sessionToken: 'session-token',
+        memberId: 'member-123',
+        organizationId: 'org-123',
+        expiresAt: new Date(),
+      };
+
+      const mockMemberInfo = {
+        memberId: 'member-123',
+        email: 'test@example.com',
+        status: 'active',
+        name: 'Test User',
+        organizationId: 'org-123',
+      };
+
+      mockAuthService.validateSession.mockResolvedValue(mockSession);
+      mockAuthService.getMemberInfo.mockResolvedValue(mockMemberInfo);
+
+      const result = await controller.getMe(authorization, organizationId);
+
+      expect(result).toEqual(mockMemberInfo);
+      expect(mockAuthService.validateSession).toHaveBeenCalledWith('session-token');
+      expect(mockAuthService.getMemberInfo).toHaveBeenCalledWith('org-123', 'member-123');
+    });
+
+    it('should get member info without organization header', async () => {
+      const authorization = 'Bearer session-token';
+
+      const mockSession = {
+        sessionToken: 'session-token',
+        memberId: 'member-123',
+        organizationId: 'org-456',
+        expiresAt: new Date(),
+      };
+
+      const mockMemberInfo = {
+        memberId: 'member-123',
+        email: 'test@example.com',
+        status: 'active',
+        name: 'Test User',
+        organizationId: 'org-456',
+      };
+
+      mockAuthService.validateSession.mockResolvedValue(mockSession);
+      mockAuthService.getMemberInfo.mockResolvedValue(mockMemberInfo);
+
+      const result = await controller.getMe(authorization, undefined);
+
+      expect(result).toEqual(mockMemberInfo);
+      expect(mockAuthService.getMemberInfo).toHaveBeenCalledWith('org-456', 'member-123');
+    });
+
+    it('should throw UnauthorizedException when no authorization header', async () => {
+      await expect(controller.getMe(undefined, 'org-123')).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('validateSession', () => {
+    it('should validate session successfully', async () => {
+      const authorization = 'Bearer session-token';
+      const mockResult = {
+        sessionToken: 'session-token',
+        memberId: 'member-123',
+        organizationId: 'org-123',
+        expiresAt: new Date(),
+      };
+
+      mockAuthService.validateSession.mockResolvedValue(mockResult);
+
+      const result = await controller.validateSession(authorization);
+
+      expect(result).toEqual(mockResult);
+      expect(mockAuthService.validateSession).toHaveBeenCalledWith('session-token');
+    });
+
+    it('should throw UnauthorizedException when no authorization header', async () => {
+      await expect(controller.validateSession(undefined)).rejects.toThrow(UnauthorizedException);
+    });
+  });
+});
