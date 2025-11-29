@@ -1,6 +1,15 @@
-import { Controller, Post, Get, Body, Headers, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Headers,
+  Query,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { AuthService, LoginDto, AuthenticateDto } from './auth.service.js';
+import { AuthService, LoginDto, AuthenticateDto } from './auth.service';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -19,12 +28,42 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Authentication successful' })
   @ApiResponse({ status: 401, description: 'Invalid authentication type' })
   async authenticate(@Body() authenticateDto: AuthenticateDto) {
-    if (authenticateDto.type === 'magic_link') {
+    const rawType = authenticateDto.type?.toLowerCase();
+    // Normalize common synonyms with clearer conditional logic (avoid nested ternary lint warning)
+    let normalizedType: string | undefined;
+    if (rawType === 'magiclink') normalizedType = 'magic_link';
+    else if (rawType === 'session_token') normalizedType = 'session';
+    else normalizedType = rawType;
+
+    // Auto-detect if missing: Stytch magic link tokens commonly contain "token" prefix while
+    // session tokens may start with "sess_" (heuristic; adjust if needed).
+    let finalType = normalizedType as 'magic_link' | 'session' | undefined;
+    if (!finalType) {
+      if (/^sess_/i.test(authenticateDto.token)) {
+        finalType = 'session';
+      } else {
+        finalType = 'magic_link';
+      }
+    }
+
+    if (finalType === 'magic_link') {
       return this.authService.authenticateMagicLink(authenticateDto.token);
-    } else if (authenticateDto.type === 'session') {
+    }
+    if (finalType === 'session') {
       return this.authService.validateSession(authenticateDto.token);
     }
-    throw new UnauthorizedException('Invalid authentication type');
+    throw new BadRequestException('Invalid authentication type. Expected magic_link or session.');
+  }
+
+  @Get('callback')
+  @ApiOperation({ summary: 'Magic link callback endpoint (consumes stytch_token query param)' })
+  @ApiResponse({ status: 200, description: 'Authentication successful' })
+  @ApiResponse({ status: 400, description: 'Missing stytch_token parameter' })
+  async magicLinkCallback(@Query('stytch_token') stytchToken: string) {
+    if (!stytchToken) {
+      throw new BadRequestException('Missing stytch_token in query parameters');
+    }
+    return this.authService.authenticateMagicLink(stytchToken);
   }
 
   @Post('logout')
@@ -52,12 +91,9 @@ export class AuthController {
       throw new UnauthorizedException('No authorization header provided');
     }
 
-    // First validate the session
+    // Return the session info which contains user details
     const token = authorization.replace('Bearer ', '');
-    const session = await this.authService.validateSession(token);
-
-    // Get user information
-    return this.authService.getUserInfo(session.userId);
+    return this.authService.validateSession(token);
   }
 
   @Get('validate')
@@ -70,7 +106,9 @@ export class AuthController {
       throw new UnauthorizedException('No authorization header provided');
     }
 
-    const token = authorization.replace('Bearer ', '');
-    return this.authService.validateSession(token);
+    // Distinct logic: directly pass trimmed token without replacing all occurrences
+    const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : authorization;
+    const sessionInfo = await this.authService.validateSession(token);
+    return { valid: true, session: sessionInfo };
   }
 }

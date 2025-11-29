@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
-import { AuthService } from './auth.service.js';
-import { StytchService } from './stytch.service.js';
+import { AuthService } from './auth.service';
+import { StytchService } from './stytch.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -11,7 +11,6 @@ describe('AuthService', () => {
     authenticateMagicLink: jest.fn(),
     authenticateSession: jest.fn(),
     revokeSession: jest.fn(),
-    getUser: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -40,7 +39,6 @@ describe('AuthService', () => {
     it('should send magic link successfully', async () => {
       const loginDto = {
         email: 'test@example.com',
-        organizationId: 'org-123',
       };
 
       mockStytchService.sendMagicLink.mockResolvedValue({
@@ -52,16 +50,12 @@ describe('AuthService', () => {
       expect(result.success).toBe(true);
       expect(result.message).toBe('Magic link sent successfully');
       expect(result.requestId).toBe('req-123');
-      expect(mockStytchService.sendMagicLink).toHaveBeenCalledWith(
-        loginDto.email,
-        loginDto.organizationId,
-      );
+      expect(mockStytchService.sendMagicLink).toHaveBeenCalledWith(loginDto.email);
     });
 
     it('should throw UnauthorizedException on failure', async () => {
       const loginDto = {
         email: 'test@example.com',
-        organizationId: 'org-123',
       };
 
       mockStytchService.sendMagicLink.mockRejectedValue(new Error('API error'));
@@ -100,9 +94,8 @@ describe('AuthService', () => {
     it('should validate session successfully', async () => {
       const token = 'session-token';
       const mockResponse = {
+        user: { user_id: 'user-123' },
         session: {
-          session_id: 'session-123',
-          user_id: 'user-123',
           expires_at: '2024-12-31T23:59:59Z',
         },
       };
@@ -111,7 +104,7 @@ describe('AuthService', () => {
 
       const result = await service.validateSession(token);
 
-      expect(result.sessionToken).toBe('session-123');
+      expect(result.sessionToken).toBe(token); // service returns input token
       expect(result.userId).toBe('user-123');
     });
 
@@ -138,36 +131,6 @@ describe('AuthService', () => {
       mockStytchService.revokeSession.mockRejectedValue(new Error('Revoke failed'));
 
       await expect(service.logout('token')).rejects.toThrow(UnauthorizedException);
-    });
-  });
-
-  describe('getUserInfo', () => {
-    it('should get user info successfully', async () => {
-      const mockUser = {
-        user_id: 'user-123',
-        emails: [
-          {
-            email: 'test@example.com',
-          },
-        ],
-        status: 'active',
-        name: 'Test User',
-      };
-
-      mockStytchService.getUser.mockResolvedValue(mockUser);
-
-      const result = await service.getUserInfo('user-123');
-
-      expect(result.userId).toBe('user-123');
-      expect(result.email).toBe('test@example.com');
-      expect(result.status).toBe('active');
-      expect(result.name).toBe('Test User');
-    });
-
-    it('should throw UnauthorizedException on failure', async () => {
-      mockStytchService.getUser.mockRejectedValue(new Error('User not found'));
-
-      await expect(service.getUserInfo('user-123')).rejects.toThrow(UnauthorizedException);
     });
   });
 });

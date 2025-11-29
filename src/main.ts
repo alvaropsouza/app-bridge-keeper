@@ -30,6 +30,10 @@ const document = SwaggerModule.createDocument(app, config);
 SwaggerModule.setup('docs', app, document);
 
 const port = process.env.PORT || 3000;
-await app.listen(port);
-logger.log(`Application is running on: http://localhost:${port}`);
+
 logger.log(`API Documentation available at: http://localhost:${port}/docs`);
+logger.log(`Frontend available at: http://localhost:${port}`);
+
+await app.listen(port);
+
+logger.log(`Application is running on: http://localhost:${port}`);

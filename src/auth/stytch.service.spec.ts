@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { StytchService } from './stytch.service.js';
-import { STYTCH_CONFIG } from '../config/stytch.config.js';
+import { StytchService } from './stytch.service';
+import { STYTCH_CONFIG } from '../config/stytch.config';
 
 describe('StytchService', () => {
   let service: StytchService;
@@ -63,15 +63,6 @@ describe('StytchService', () => {
     it('should throw error when client is not initialized', async () => {
       const serviceWithoutClient = new StytchService({ projectId: '', secret: '' });
       await expect(serviceWithoutClient.revokeSession('token-123')).rejects.toThrow(
-        'Stytch client not initialized',
-      );
-    });
-  });
-
-  describe('getUser', () => {
-    it('should throw error when client is not initialized', async () => {
-      const serviceWithoutClient = new StytchService({ projectId: '', secret: '' });
-      await expect(serviceWithoutClient.getUser('user-123')).rejects.toThrow(
         'Stytch client not initialized',
       );
     });

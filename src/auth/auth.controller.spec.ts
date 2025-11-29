@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
-import { AuthController } from './auth.controller.js';
-import { AuthService } from './auth.service.js';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -40,7 +40,6 @@ describe('AuthController', () => {
     it('should initiate login', async () => {
       const loginDto = {
         email: 'test@example.com',
-        organizationId: 'org-123',
       };
 
       const mockResult = {
@@ -59,10 +58,9 @@ describe('AuthController', () => {
   });
 
   describe('authenticate', () => {
-    it('should authenticate with magic link', async () => {
+    it('should authenticate with magic link (auto-detect type)', async () => {
       const authenticateDto = {
         token: 'magic-link-token',
-        type: 'magic_link' as const,
       };
 
       const mockResult = {
@@ -101,13 +99,15 @@ describe('AuthController', () => {
       expect(mockAuthService.validateSession).toHaveBeenCalledWith(authenticateDto.token);
     });
 
-    it('should throw UnauthorizedException for invalid type', async () => {
+    it('should throw BadRequestException for invalid type', async () => {
       const authenticateDto = {
         token: 'token',
         type: 'invalid' as any,
       };
 
-      await expect(controller.authenticate(authenticateDto)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.authenticate(authenticateDto)).rejects.toThrow(
+        'Invalid authentication type',
+      );
     });
   });
 
@@ -133,55 +133,37 @@ describe('AuthController', () => {
   });
 
   describe('getMe', () => {
-    it('should get user info', async () => {
+    it('should return session info', async () => {
       const authorization = 'Bearer session-token';
-
       const mockSession = {
         sessionToken: 'session-token',
         userId: 'user-123',
         expiresAt: new Date(),
       };
-
-      const mockUserInfo = {
-        userId: 'user-123',
-        email: 'test@example.com',
-        status: 'active',
-        name: 'Test User',
-      };
-
       mockAuthService.validateSession.mockResolvedValue(mockSession);
-      mockAuthService.getUserInfo.mockResolvedValue(mockUserInfo);
-
       const result = await controller.getMe(authorization);
-
-      expect(result).toEqual(mockUserInfo);
+      expect(result).toEqual(mockSession);
       expect(mockAuthService.validateSession).toHaveBeenCalledWith('session-token');
-      expect(mockAuthService.getUserInfo).toHaveBeenCalledWith('user-123');
     });
-
     it('should throw UnauthorizedException when no authorization header', async () => {
       await expect(controller.getMe(undefined)).rejects.toThrow(UnauthorizedException);
     });
   });
 
   describe('validateSession', () => {
-    it('should validate session successfully', async () => {
+    it('should validate session successfully and wrap response', async () => {
       const authorization = 'Bearer session-token';
       const mockResult = {
         sessionToken: 'session-token',
-        memberId: 'member-123',
-        organizationId: 'org-123',
+        userId: 'user-123',
         expiresAt: new Date(),
       };
-
       mockAuthService.validateSession.mockResolvedValue(mockResult);
-
       const result = await controller.validateSession(authorization);
-
-      expect(result).toEqual(mockResult);
+      expect(result.valid).toBe(true);
+      expect(result.session).toEqual(mockResult);
       expect(mockAuthService.validateSession).toHaveBeenCalledWith('session-token');
     });
-
     it('should throw UnauthorizedException when no authorization header', async () => {
       await expect(controller.validateSession(undefined)).rejects.toThrow(UnauthorizedException);
     });

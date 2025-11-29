@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
-import { StytchService } from './stytch.service.js';
+import { StytchService } from './stytch.service';
 
 export class LoginDto {
   @ApiProperty({
@@ -18,16 +18,20 @@ export class AuthenticateDto {
   token: string;
 
   @ApiProperty({
-    description: 'Type of authentication',
+    description:
+      'Type of authentication (optional if auto-detect). Accepted values: magic_link, session',
     enum: ['magic_link', 'session'],
     example: 'magic_link',
+    required: false,
   })
-  type: 'magic_link' | 'session';
+  type?: 'magic_link' | 'session';
 }
 
 export interface SessionInfo {
   sessionToken: string;
   userId: string;
+  email?: string;
+  name?: string;
   expiresAt: Date;
 }
 
@@ -57,19 +61,27 @@ export class AuthService {
 
   /**
    * Authenticate using magic link token
+   * Per Stytch best practices: uses server-calculated session expiry
    */
   async authenticateMagicLink(token: string): Promise<SessionInfo> {
     try {
       const result = await this.stytchService.authenticateMagicLink(token);
 
-      // Magic link response doesn't include session expiry directly
-      // Set a default expiry of 24 hours from now
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24);
+      // Calculate session expiry based on the session duration we set
+      // We set 30 days (43200 minutes) in the authenticate call
+      const expiresAt = new Date(Date.now() + 43200 * 60 * 1000); // 30 days
+
+      // Extract email from the user object if available
+      const email =
+        result.user?.emails && result.user.emails.length > 0
+          ? result.user.emails[0].email
+          : undefined;
 
       return {
         sessionToken: result.session_token,
         userId: result.user_id,
+        email,
+        name: result.user?.name?.first_name,
         expiresAt,
       };
     } catch (error) {
@@ -80,15 +92,21 @@ export class AuthService {
 
   /**
    * Validate an existing session
+   * Per Stytch best practices, validates session with Stytch on every protected request
    */
   async validateSession(sessionToken: string): Promise<SessionInfo> {
     try {
-      const result = await this.stytchService.authenticateSession(sessionToken);
+      // Validate session with Stytch (per best practices - validate on every protected request)
+      const stytchResponse = await this.stytchService.authenticateSession(sessionToken);
+
+      // Extract user and session info from Stytch response
+      const user = stytchResponse.user;
+      const session = stytchResponse.session;
 
       return {
-        sessionToken: result.session.session_id,
-        userId: result.session.user_id,
-        expiresAt: new Date(result.session.expires_at),
+        sessionToken: sessionToken,
+        userId: user.user_id,
+        expiresAt: new Date(session.expires_at),
       };
     } catch (error) {
       this.logger.error(`Session validation failed: ${error.message}`);
@@ -110,25 +128,6 @@ export class AuthService {
     } catch (error) {
       this.logger.error(`Logout failed: ${error.message}`);
       throw new UnauthorizedException('Failed to revoke session');
-    }
-  }
-
-  /**
-   * Get user information
-   */
-  async getUserInfo(userId: string) {
-    try {
-      const result = await this.stytchService.getUser(userId);
-
-      return {
-        userId: result.user_id,
-        email: result.emails && result.emails.length > 0 ? result.emails[0].email : null,
-        status: result.status,
-        name: result.name,
-      };
-    } catch (error) {
-      this.logger.error(`Failed to get user info: ${error.message}`);
-      throw new UnauthorizedException('Failed to retrieve user information');
     }
   }
 }
