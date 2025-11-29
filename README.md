@@ -222,6 +222,7 @@ The application uses Stytch B2B SDK for authentication and session management:
 | `STYTCH_SECRET` | Your Stytch secret key | Yes |
 | `PORT` | Application port (default: 3000) | No |
 | `NODE_ENV` | Environment (development/production) | No |
+| `CORS_ORIGINS` | Comma-separated allowed CORS origins | No |
 
 ## Security Considerations
 
@@ -230,6 +231,8 @@ The application uses Stytch B2B SDK for authentication and session management:
 - Validate session tokens on every protected endpoint
 - Implement rate limiting for authentication endpoints
 - Use environment-specific Stytch projects (dev/staging/prod)
+- Configure CORS properly for production (specify allowed origins in `CORS_ORIGINS` environment variable)
+- In production, either disable CORS or specify exact allowed origins
 
 ## Contributing
 

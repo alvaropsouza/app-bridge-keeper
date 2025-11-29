@@ -52,11 +52,16 @@ export class AuthService {
     try {
       const result = await this.stytchService.authenticateMagicLink(token);
 
+      // Magic link response doesn't include session expiry directly
+      // Set a default expiry of 24 hours from now
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+
       return {
         sessionToken: result.session_token,
         memberId: result.member_id,
         organizationId: result.organization_id,
-        expiresAt: new Date(), // Magic link response doesn't include session expiry directly
+        expiresAt,
       };
     } catch (error) {
       this.logger.error(`Magic link authentication failed: ${error.message}`);

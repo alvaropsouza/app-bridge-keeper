@@ -12,6 +12,12 @@
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
+    // Note: These are relaxed for NestJS compatibility and rapid development
+    // Consider enabling these for stricter type checking in production:
+    // - strictNullChecks: true
+    // - noImplicitAny: true
+    // - strictBindCallApply: true
+    // - forceConsistentCasingInFileNames: true
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
