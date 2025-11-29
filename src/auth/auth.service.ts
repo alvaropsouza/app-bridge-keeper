@@ -1,20 +1,33 @@
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
 import { StytchService } from './stytch.service';
 
-export interface LoginDto {
+export class LoginDto {
+  @ApiProperty({
+    description: 'Email address of the user',
+    example: 'user@example.com',
+  })
   email: string;
-  organizationId: string;
 }
 
-export interface AuthenticateDto {
+export class AuthenticateDto {
+  @ApiProperty({
+    description: 'Authentication token (magic link token or session token)',
+    example: 'token_123abc...',
+  })
   token: string;
+
+  @ApiProperty({
+    description: 'Type of authentication',
+    enum: ['magic_link', 'session'],
+    example: 'magic_link',
+  })
   type: 'magic_link' | 'session';
 }
 
 export interface SessionInfo {
   sessionToken: string;
-  memberId: string;
-  organizationId: string;
+  userId: string;
   expiresAt: Date;
 }
 
@@ -29,10 +42,7 @@ export class AuthService {
    */
   async initiateLogin(loginDto: LoginDto) {
     try {
-      const result = await this.stytchService.sendMagicLink(
-        loginDto.email,
-        loginDto.organizationId,
-      );
+      const result = await this.stytchService.sendMagicLink(loginDto.email);
 
       return {
         success: true,
@@ -59,8 +69,7 @@ export class AuthService {
 
       return {
         sessionToken: result.session_token,
-        memberId: result.member_id,
-        organizationId: result.organization_id,
+        userId: result.user_id,
         expiresAt,
       };
     } catch (error) {
@@ -77,10 +86,9 @@ export class AuthService {
       const result = await this.stytchService.authenticateSession(sessionToken);
 
       return {
-        sessionToken: result.session_token,
-        memberId: result.member.member_id,
-        organizationId: result.organization.organization_id,
-        expiresAt: new Date(result.member_session.expires_at),
+        sessionToken: result.session.session_id,
+        userId: result.session.user_id,
+        expiresAt: new Date(result.session.expires_at),
       };
     } catch (error) {
       this.logger.error(`Session validation failed: ${error.message}`);
@@ -106,22 +114,21 @@ export class AuthService {
   }
 
   /**
-   * Get member information
+   * Get user information
    */
-  async getMemberInfo(organizationId: string, memberId: string) {
+  async getUserInfo(userId: string) {
     try {
-      const result = await this.stytchService.getMember(organizationId, memberId);
+      const result = await this.stytchService.getUser(userId);
 
       return {
-        memberId: result.member.member_id,
-        email: result.member.email_address,
-        status: result.member.status,
-        name: result.member.name,
-        organizationId: result.member.organization_id,
+        userId: result.user_id,
+        email: result.emails && result.emails.length > 0 ? result.emails[0].email : null,
+        status: result.status,
+        name: result.name,
       };
     } catch (error) {
-      this.logger.error(`Failed to get member info: ${error.message}`);
-      throw new UnauthorizedException('Failed to retrieve member information');
+      this.logger.error(`Failed to get user info: ${error.message}`);
+      throw new UnauthorizedException('Failed to retrieve user information');
     }
   }
 }

@@ -5,14 +5,14 @@ import { STYTCH_CONFIG, StytchConfig } from '../config/stytch.config';
 @Injectable()
 export class StytchService {
   private readonly logger = new Logger(StytchService.name);
-  private client: stytch.B2BClient;
+  private client: stytch.Client;
 
   constructor(@Inject(STYTCH_CONFIG) private config: StytchConfig) {
     if (!config.projectId || !config.secret) {
       this.logger.warn('Stytch credentials not configured. Using mock mode.');
       // For testing purposes, we can work without actual credentials
     } else {
-      this.client = new stytch.B2BClient({
+      this.client = new stytch.Client({
         project_id: config.projectId,
         secret: config.secret,
       });
@@ -20,22 +20,21 @@ export class StytchService {
     }
   }
 
-  getClient(): stytch.B2BClient | null {
+  getClient(): stytch.Client | null {
     return this.client || null;
   }
 
   /**
    * Send a magic link to the user's email
    */
-  async sendMagicLink(email: string, organizationId: string) {
+  async sendMagicLink(email: string) {
     if (!this.client) {
       throw new Error('Stytch client not initialized');
     }
 
     try {
-      const response = await this.client.magicLinks.email.loginOrSignup({
-        email_address: email,
-        organization_id: organizationId,
+      const response = await this.client.magicLinks.email.loginOrCreate({
+        email: email,
       });
       this.logger.log(`Magic link sent to ${email}`);
       return response;
@@ -55,7 +54,7 @@ export class StytchService {
 
     try {
       const response = await this.client.magicLinks.authenticate({
-        magic_links_token: token,
+        token: token,
       });
       this.logger.log('Magic link authenticated successfully');
       return response;
@@ -106,22 +105,21 @@ export class StytchService {
   }
 
   /**
-   * Get member information
+   * Get user information
    */
-  async getMember(organizationId: string, memberId: string) {
+  async getUser(userId: string) {
     if (!this.client) {
       throw new Error('Stytch client not initialized');
     }
 
     try {
-      const response = await this.client.organizations.members.get({
-        organization_id: organizationId,
-        member_id: memberId,
+      const response = await this.client.users.get({
+        user_id: userId,
       });
-      this.logger.log(`Retrieved member ${memberId}`);
+      this.logger.log(`Retrieved user ${userId}`);
       return response;
     } catch (error) {
-      this.logger.error(`Failed to get member: ${error.message}`);
+      this.logger.error(`Failed to get user: ${error.message}`);
       throw error;
     }
   }
