@@ -29,14 +29,11 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid authentication type' })
   async authenticate(@Body() authenticateDto: AuthenticateDto) {
     const rawType = authenticateDto.type?.toLowerCase();
-    // Normalize common synonyms with clearer conditional logic (avoid nested ternary lint warning)
     let normalizedType: string | undefined;
     if (rawType === 'magiclink') normalizedType = 'magic_link';
     else if (rawType === 'session_token') normalizedType = 'session';
     else normalizedType = rawType;
 
-    // Auto-detect if missing: Stytch magic link tokens commonly contain "token" prefix while
-    // session tokens may start with "sess_" (heuristic; adjust if needed).
     let finalType = normalizedType as 'magic_link' | 'session' | undefined;
     if (!finalType) {
       if (/^sess_/i.test(authenticateDto.token)) {
@@ -76,7 +73,6 @@ export class AuthController {
       throw new UnauthorizedException('No authorization header provided');
     }
 
-    // Extract token from "Bearer <token>" format
     const token = authorization.replace('Bearer ', '');
     return this.authService.logout(token);
   }
@@ -91,7 +87,6 @@ export class AuthController {
       throw new UnauthorizedException('No authorization header provided');
     }
 
-    // Return the session info which contains user details
     const token = authorization.replace('Bearer ', '');
     return this.authService.validateSession(token);
   }
@@ -106,7 +101,6 @@ export class AuthController {
       throw new UnauthorizedException('No authorization header provided');
     }
 
-    // Distinct logic: directly pass trimmed token without replacing all occurrences
     const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : authorization;
     const sessionInfo = await this.authService.validateSession(token);
     return { valid: true, session: sessionInfo };

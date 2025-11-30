@@ -1,12 +1,12 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module.js';
+import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
 
 const app = await NestFactory.create(AppModule);
 const logger = new Logger('Main');
 
-let allowedOrigins: string[] = [];
+let allowedOrigins: string[];
 if (process.env.CORS_ORIGINS) {
   allowedOrigins = process.env.CORS_ORIGINS.split(',');
 } else if (process.env.NODE_ENV === 'production') {
@@ -31,8 +31,8 @@ SwaggerModule.setup('docs', app, document);
 
 const port = process.env.PORT || 3000;
 
-logger.log(`API Documentation available at: http://localhost:${port}/docs`);
-logger.log(`Frontend available at: http://localhost:${port}`);
+logger.log(`Docs: http://localhost:${port}/docs`);
+logger.log(`Root: http://localhost:${port}`);
 
 await app.listen(port);
 

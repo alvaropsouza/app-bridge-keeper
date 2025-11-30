@@ -41,9 +41,6 @@ export class AuthService {
 
   constructor(private readonly stytchService: StytchService) {}
 
-  /**
-   * Initiate login by sending magic link
-   */
   async initiateLogin(loginDto: LoginDto) {
     try {
       const result = await this.stytchService.sendMagicLink(loginDto.email);
@@ -59,23 +56,11 @@ export class AuthService {
     }
   }
 
-  /**
-   * Authenticate using magic link token
-   * Per Stytch best practices: uses server-calculated session expiry
-   */
   async authenticateMagicLink(token: string): Promise<SessionInfo> {
     try {
       const result = await this.stytchService.authenticateMagicLink(token);
-
-      // Calculate session expiry based on the session duration we set
-      // We set 30 days (43200 minutes) in the authenticate call
-      const expiresAt = new Date(Date.now() + 43200 * 60 * 1000); // 30 days
-
-      // Extract email from the user object if available
-      const email =
-        result.user?.emails && result.user.emails.length > 0
-          ? result.user.emails[0].email
-          : undefined;
+      const expiresAt = new Date(Date.now() + 43200 * 60 * 1000);
+      const email = result.user?.emails?.[0]?.email;
 
       return {
         sessionToken: result.session_token,
@@ -90,16 +75,9 @@ export class AuthService {
     }
   }
 
-  /**
-   * Validate an existing session
-   * Per Stytch best practices, validates session with Stytch on every protected request
-   */
   async validateSession(sessionToken: string): Promise<SessionInfo> {
     try {
-      // Validate session with Stytch (per best practices - validate on every protected request)
       const stytchResponse = await this.stytchService.authenticateSession(sessionToken);
-
-      // Extract user and session info from Stytch response
       const user = stytchResponse.user;
       const session = stytchResponse.session;
 
@@ -114,9 +92,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Logout by revoking session
-   */
   async logout(sessionToken: string) {
     try {
       await this.stytchService.revokeSession(sessionToken);
