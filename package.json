@@ -26,6 +26,7 @@
     "@nestjs/platform-express": "^11.1.9",
     "@nestjs/serve-static": "^5.0.4",
     "@nestjs/swagger": "^11.2.3",
+    "axios": "^1.13.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "stytch": "^12.43.1"
@@ -44,7 +45,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "jest": "^30.2.0",
-    "prettier": "^3.7.2",
+    "prettier": "^3.7.3",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.5",
     "ts-loader": "^9.5.4",

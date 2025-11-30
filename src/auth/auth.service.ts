@@ -1,39 +1,6 @@
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
-import { ApiProperty } from '@nestjs/swagger';
 import { StytchService } from './stytch.service';
-
-export class LoginDto {
-  @ApiProperty({
-    description: 'Email address of the user',
-    example: 'user@example.com',
-  })
-  email: string;
-}
-
-export class AuthenticateDto {
-  @ApiProperty({
-    description: 'Authentication token (magic link token or session token)',
-    example: 'token_123abc...',
-  })
-  token: string;
-
-  @ApiProperty({
-    description:
-      'Type of authentication (optional if auto-detect). Accepted values: magic_link, session',
-    enum: ['magic_link', 'session'],
-    example: 'magic_link',
-    required: false,
-  })
-  type?: 'magic_link' | 'session';
-}
-
-export interface SessionInfo {
-  sessionToken: string;
-  userId: string;
-  email?: string;
-  name?: string;
-  expiresAt: Date;
-}
+import { LoginDto, SessionInfo } from './dto/auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -52,7 +19,7 @@ export class AuthService {
       };
     } catch (error) {
       this.logger.error(`Login initiation failed: ${error.message}`);
-      throw new UnauthorizedException('Failed to send magic link');
+      throw error;
     }
   }
 
