@@ -9,7 +9,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { AuthService, LoginDto, AuthenticateDto } from './auth.service';
+import { AuthService } from './auth.service';
+import { AuthenticateDto, LoginDto } from './dto/auth.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
