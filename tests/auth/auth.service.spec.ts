@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { StytchService } from './stytch.service';
+import { AuthService } from 'src/auth/auth.service';
+import { StytchService } from 'src/auth/stytch.service';
 
 describe('AuthService', () => {
   let service: AuthService;

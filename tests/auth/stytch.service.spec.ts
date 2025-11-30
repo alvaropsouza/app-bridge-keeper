@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { StytchService } from './stytch.service';
-import { STYTCH_CONFIG } from '../config/stytch.config';
+import { StytchService } from 'src/auth/stytch.service';
+import { STYTCH_CONFIG } from 'src/config/stytch.config';
 
 describe('StytchService', () => {
   let service: StytchService;
