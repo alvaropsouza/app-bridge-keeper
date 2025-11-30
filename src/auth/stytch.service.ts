@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, UnauthorizedException } from '@nestjs/common';
 import * as stytch from 'stytch';
 import { STYTCH_CONFIG } from '../config/stytch.config';
 import type { StytchConfig } from '../config/stytch.config';
@@ -21,13 +21,46 @@ export class StytchService {
     return this.client || null;
   }
 
+  private extractErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    if (typeof error === 'object' && error && 'message' in error) {
+      const { message } = error as { message: unknown };
+      return typeof message === 'string' ? message : JSON.stringify(message);
+    }
+    if (typeof error === 'string') {
+      return error;
+    }
+    return 'Unknown error';
+  }
+
   async sendMagicLink(email: string) {
     if (!this.client) {
       throw new Error('Stytch client not initialized');
     }
 
+    const getUserByEmailQuery: stytch.UsersSearchRequest = {
+      query: {
+        operator: 'AND',
+        operands: [
+          {
+            filter_name: 'email_address',
+            filter_value: [email],
+          },
+        ],
+      },
+    };
+
     try {
       const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+      const user = await this.client.users.search(getUserByEmailQuery);
+
+      const noUsersFound = user.results.length === 0;
+      if (noUsersFound) {
+        throw new UnauthorizedException({ message: 'User not found' });
+      }
+
       const login_magic_link_url = redirectUrl;
       const response = await this.client.magicLinks.email.loginOrCreate({
         email,
@@ -36,19 +69,12 @@ export class StytchService {
       this.logger.log(`Magic link requested for ${email} redirect=${login_magic_link_url}`);
       return response;
     } catch (error) {
-      let errMessage = 'Unknown error';
-      if (typeof error === 'object' && error && 'message' in error) {
-        const { message } = error as { message: unknown };
-        errMessage = typeof message === 'string' ? message : JSON.stringify(message);
-      } else if (error) {
-        errMessage = String(error);
-      }
+      const errMessage = this.extractErrorMessage(error);
+
       this.logger.error(`Failed to send magic link: ${errMessage}`);
-      try {
-        this.logger.error(`Full error JSON: ${JSON.stringify(error)}`);
-      } catch (error_) {
-        this.logger.debug(`Could not stringify error object: ${String(error_)}`);
-      }
+
+      this.logErrorDetails(error);
+
       throw error;
     }
   }
@@ -104,6 +130,14 @@ export class StytchService {
     } catch (error) {
       this.logger.error(`Failed to revoke session: ${error.message}`);
       throw error;
+    }
+  }
+
+  private logErrorDetails(error: unknown): void {
+    try {
+      this.logger.error(`Full error JSON: ${JSON.stringify(error)}`);
+    } catch {
+      this.logger.debug(`Could not stringify error object: ${String(error)}`);
     }
   }
 }
