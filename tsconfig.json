@@ -1,30 +1,26 @@
 {
   "compilerOptions": {
-    "module": "ES2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "isolatedModules": true,
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "types": ["node", "jest"],
     "allowSyntheticDefaultImports": true,
-    "target": "ES2021",
+    "target": "esnext",
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
-    "moduleResolution": "node",
-    // Note: These are relaxed for NestJS compatibility and rapid development
-    // Consider enabling these for stricter type checking in production:
-    // - strictNullChecks: true
-    // - noImplicitAny: true
-    // - strictBindCallApply: true
-    // - forceConsistentCasingInFileNames: true
-    "strictNullChecks": false,
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
-  },
-  "include": ["src/**/*", "test/**/*"],
-  "exclude": ["node_modules", "dist"]
+    "noFallthroughCasesInSwitch": false,
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  }
 }

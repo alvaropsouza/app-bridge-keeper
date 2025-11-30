@@ -84,7 +84,7 @@ export class AuthService {
       return {
         sessionToken: sessionToken,
         userId: user.user_id,
-        expiresAt: new Date(session.expires_at),
+        expiresAt: session.expires_at ? new Date(session.expires_at) : new Date(),
       };
     } catch (error) {
       this.logger.error(`Session validation failed: ${error.message}`);

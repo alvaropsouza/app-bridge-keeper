@@ -128,7 +128,7 @@ describe('AuthController', () => {
     });
 
     it('should throw UnauthorizedException when no authorization header', async () => {
-      await expect(controller.logout(undefined)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.logout('')).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -146,7 +146,7 @@ describe('AuthController', () => {
       expect(mockAuthService.validateSession).toHaveBeenCalledWith('session-token');
     });
     it('should throw UnauthorizedException when no authorization header', async () => {
-      await expect(controller.getMe(undefined)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.getMe('')).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -165,7 +165,7 @@ describe('AuthController', () => {
       expect(mockAuthService.validateSession).toHaveBeenCalledWith('session-token');
     });
     it('should throw UnauthorizedException when no authorization header', async () => {
-      await expect(controller.validateSession(undefined)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.validateSession('')).rejects.toThrow(UnauthorizedException);
     });
   });
 });
