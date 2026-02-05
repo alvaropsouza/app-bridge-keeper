@@ -2,22 +2,14 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
+import 'dotenv/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {});
   const logger = new Logger('Main');
 
-  let allowedOrigins: string[];
-  if (process.env.CORS_ORIGINS) {
-    allowedOrigins = process.env.CORS_ORIGINS.split(',');
-  } else if (process.env.NODE_ENV === 'production') {
-    allowedOrigins = [];
-  } else {
-    allowedOrigins = ['http://localhost:3000', 'http://localhost:3001'];
-  }
-
   app.enableCors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+    origin: String(process.env.CORS_ORIGINS).split(','),
     credentials: true,
   });
 
