@@ -19,7 +19,7 @@ export class AuthService {
       };
     } catch (error) {
       this.logger.error(`Login initiation failed: ${error.message}`);
-      throw error;
+      throw new UnauthorizedException('Unable to initiate login');
     }
   }
 

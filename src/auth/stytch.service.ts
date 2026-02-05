@@ -65,7 +65,7 @@ export class StytchService {
       return response;
     } catch (error) {
       throw new UnauthorizedException({
-        message: error?.response?.message ?? 'Failed to send magic link',
+        message: error?.response?.message ?? `Failed to send magic link ${JSON.stringify(error)}`,
         code: error?.status ?? HttpStatus.UNAUTHORIZED,
       });
     }
