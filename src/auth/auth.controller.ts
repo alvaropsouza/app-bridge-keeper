@@ -49,6 +49,7 @@ const toUserPayload = (sessionInfo) => ({
   email: sessionInfo.email,
   name: sessionInfo.name,
   expiresAt: sessionInfo.expiresAt,
+  sessionToken: sessionInfo.sessionToken, // Include token for localStorage fallback
 });
 
 @ApiTags('Authentication')
