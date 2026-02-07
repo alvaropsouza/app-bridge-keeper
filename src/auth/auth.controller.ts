@@ -18,13 +18,22 @@ import type { Request, Response } from 'express';
 const SESSION_COOKIE = 'kab_session';
 const isProd = process.env.NODE_ENV === 'production';
 
-const buildCookieOptions = (maxAge?: number) => ({
-  httpOnly: true,
-  secure: isProd,
-  sameSite: 'lax' as const,
-  path: '/',
-  ...(maxAge ? { maxAge } : {}),
-});
+const buildCookieOptions = (maxAge?: number) => {
+  const options = {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? ('none' as const) : ('lax' as const),
+    path: '/',
+    ...(maxAge ? { maxAge } : {}),
+  };
+
+  console.log('[Cookie] Building cookie options:', {
+    ...options,
+    maxAge: maxAge ? `${Math.floor(maxAge / 1000 / 60)} minutes` : 'session',
+  });
+
+  return options;
+};
 
 const extractToken = (authorization?: string, req?: Request) => {
   if (authorization) {
@@ -80,12 +89,22 @@ export class AuthController {
     if (finalType === 'magic_link') {
       const sessionInfo = await this.authService.authenticateMagicLink(authenticateDto.token);
       const maxAge = Math.max(0, sessionInfo.expiresAt.getTime() - Date.now());
+      console.log(
+        '[Authenticate] Magic link authenticated. Setting cookie with maxAge:',
+        Math.floor(maxAge / 1000 / 60),
+        'minutes',
+      );
       res.cookie(SESSION_COOKIE, sessionInfo.sessionToken, buildCookieOptions(maxAge));
       return toUserPayload(sessionInfo);
     }
     if (finalType === 'session') {
       const sessionInfo = await this.authService.validateSession(authenticateDto.token);
       const maxAge = Math.max(0, sessionInfo.expiresAt.getTime() - Date.now());
+      console.log(
+        '[Authenticate] Session validated. Setting cookie with maxAge:',
+        Math.floor(maxAge / 1000 / 60),
+        'minutes',
+      );
       res.cookie(SESSION_COOKIE, sessionInfo.sessionToken, buildCookieOptions(maxAge));
       return toUserPayload(sessionInfo);
     }
@@ -151,11 +170,21 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'No authorization header provided or invalid session' })
   async validateSession(@Headers('authorization') authorization: string, @Req() req: Request) {
     const token = extractToken(authorization, req);
+
+    console.log(
+      '[Validate] Checking session. Has cookie:',
+      !!req.cookies?.[SESSION_COOKIE],
+      'Has auth header:',
+      !!authorization,
+    );
+
     if (!token) {
+      console.log('[Validate] No token found, returning 401');
       throw new UnauthorizedException('No authorization header or cookie provided');
     }
 
     const sessionInfo = await this.authService.validateSession(token);
+    console.log('[Validate] Session valid. Expires at:', sessionInfo.expiresAt);
     return { valid: true, user: toUserPayload(sessionInfo), expiresAt: sessionInfo.expiresAt };
   }
 }
