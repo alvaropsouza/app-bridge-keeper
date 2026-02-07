@@ -3,10 +3,13 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
 import 'dotenv/config';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {});
   const logger = new Logger('Main');
+
+  app.use(cookieParser());
 
   app.enableCors({
     origin: String(process.env.CORS_ORIGINS).split(','),

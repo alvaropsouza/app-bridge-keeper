@@ -47,10 +47,13 @@ export class AuthService {
       const stytchResponse = await this.stytchService.authenticateSession(sessionToken);
       const user = stytchResponse.user;
       const session = stytchResponse.session;
+      const email = user?.emails?.[0]?.email;
 
       return {
         sessionToken: sessionToken,
         userId: user.user_id,
+        email,
+        name: user?.name?.first_name,
         expiresAt: session.expires_at ? new Date(session.expires_at) : new Date(),
       };
     } catch (error) {

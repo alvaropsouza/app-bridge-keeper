@@ -7,10 +7,40 @@ import {
   Query,
   BadRequestException,
   UnauthorizedException,
+  Req,
+  Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { AuthenticateDto, LoginDto } from './dto/auth.dto';
+import type { Request, Response } from 'express';
+
+const SESSION_COOKIE = 'kab_session';
+const isProd = process.env.NODE_ENV === 'production';
+
+const buildCookieOptions = (maxAge?: number) => ({
+  httpOnly: true,
+  secure: isProd,
+  sameSite: 'lax' as const,
+  path: '/',
+  ...(maxAge ? { maxAge } : {}),
+});
+
+const extractToken = (authorization?: string, req?: Request) => {
+  if (authorization) {
+    return authorization.startsWith('Bearer ') ? authorization.slice(7) : authorization;
+  }
+
+  const cookieToken = req?.cookies?.[SESSION_COOKIE];
+  return cookieToken || null;
+};
+
+const toUserPayload = (sessionInfo) => ({
+  userId: sessionInfo.userId,
+  email: sessionInfo.email,
+  name: sessionInfo.name,
+  expiresAt: sessionInfo.expiresAt,
+});
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -28,7 +58,10 @@ export class AuthController {
   @ApiOperation({ summary: 'Authenticate with magic link or session token' })
   @ApiResponse({ status: 201, description: 'Authentication successful' })
   @ApiResponse({ status: 401, description: 'Invalid authentication type' })
-  async authenticate(@Body() authenticateDto: AuthenticateDto) {
+  async authenticate(
+    @Body() authenticateDto: AuthenticateDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const rawType = authenticateDto.type?.toLowerCase();
     let normalizedType: string | undefined;
     if (rawType === 'magiclink') normalizedType = 'magic_link';
@@ -45,10 +78,16 @@ export class AuthController {
     }
 
     if (finalType === 'magic_link') {
-      return this.authService.authenticateMagicLink(authenticateDto.token);
+      const sessionInfo = await this.authService.authenticateMagicLink(authenticateDto.token);
+      const maxAge = Math.max(0, sessionInfo.expiresAt.getTime() - Date.now());
+      res.cookie(SESSION_COOKIE, sessionInfo.sessionToken, buildCookieOptions(maxAge));
+      return toUserPayload(sessionInfo);
     }
     if (finalType === 'session') {
-      return this.authService.validateSession(authenticateDto.token);
+      const sessionInfo = await this.authService.validateSession(authenticateDto.token);
+      const maxAge = Math.max(0, sessionInfo.expiresAt.getTime() - Date.now());
+      res.cookie(SESSION_COOKIE, sessionInfo.sessionToken, buildCookieOptions(maxAge));
+      return toUserPayload(sessionInfo);
     }
     throw new BadRequestException('Invalid authentication type. Expected magic_link or session.');
   }
@@ -57,11 +96,17 @@ export class AuthController {
   @ApiOperation({ summary: 'Magic link callback endpoint (consumes stytch_token query param)' })
   @ApiResponse({ status: 200, description: 'Authentication successful' })
   @ApiResponse({ status: 400, description: 'Missing stytch_token parameter' })
-  async magicLinkCallback(@Query('stytch_token') stytchToken: string) {
+  async magicLinkCallback(
+    @Query('stytch_token') stytchToken: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     if (!stytchToken) {
       throw new BadRequestException('Missing stytch_token in query parameters');
     }
-    return this.authService.authenticateMagicLink(stytchToken);
+    const sessionInfo = await this.authService.authenticateMagicLink(stytchToken);
+    const maxAge = Math.max(0, sessionInfo.expiresAt.getTime() - Date.now());
+    res.cookie(SESSION_COOKIE, sessionInfo.sessionToken, buildCookieOptions(maxAge));
+    return toUserPayload(sessionInfo);
   }
 
   @Post('logout')
@@ -69,13 +114,19 @@ export class AuthController {
   @ApiOperation({ summary: 'Logout and invalidate session' })
   @ApiResponse({ status: 201, description: 'Logout successful' })
   @ApiResponse({ status: 401, description: 'No authorization header provided' })
-  async logout(@Headers('authorization') authorization: string) {
-    if (!authorization) {
-      throw new UnauthorizedException('No authorization header provided');
+  async logout(
+    @Headers('authorization') authorization: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const token = extractToken(authorization, req);
+    if (!token) {
+      throw new UnauthorizedException('No authorization header or cookie provided');
     }
 
-    const token = authorization.replace('Bearer ', '');
-    return this.authService.logout(token);
+    const result = await this.authService.logout(token);
+    res.clearCookie(SESSION_COOKIE, buildCookieOptions());
+    return result;
   }
 
   @Get('me')
@@ -83,13 +134,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user information' })
   @ApiResponse({ status: 200, description: 'User information retrieved successfully' })
   @ApiResponse({ status: 401, description: 'No authorization header provided' })
-  async getMe(@Headers('authorization') authorization: string) {
-    if (!authorization) {
-      throw new UnauthorizedException('No authorization header provided');
+  async getMe(@Headers('authorization') authorization: string, @Req() req: Request) {
+    const token = extractToken(authorization, req);
+    if (!token) {
+      throw new UnauthorizedException('No authorization header or cookie provided');
     }
 
-    const token = authorization.replace('Bearer ', '');
-    return this.authService.validateSession(token);
+    const sessionInfo = await this.authService.validateSession(token);
+    return toUserPayload(sessionInfo);
   }
 
   @Get('validate')
@@ -97,13 +149,13 @@ export class AuthController {
   @ApiOperation({ summary: 'Validate session token' })
   @ApiResponse({ status: 200, description: 'Session is valid' })
   @ApiResponse({ status: 401, description: 'No authorization header provided or invalid session' })
-  async validateSession(@Headers('authorization') authorization: string) {
-    if (!authorization) {
-      throw new UnauthorizedException('No authorization header provided');
+  async validateSession(@Headers('authorization') authorization: string, @Req() req: Request) {
+    const token = extractToken(authorization, req);
+    if (!token) {
+      throw new UnauthorizedException('No authorization header or cookie provided');
     }
 
-    const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : authorization;
     const sessionInfo = await this.authService.validateSession(token);
-    return { valid: true, session: sessionInfo };
+    return { valid: true, user: toUserPayload(sessionInfo), expiresAt: sessionInfo.expiresAt };
   }
 }
