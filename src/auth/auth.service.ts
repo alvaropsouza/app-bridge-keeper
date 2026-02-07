@@ -26,15 +26,21 @@ export class AuthService {
   async authenticateMagicLink(token: string): Promise<SessionInfo> {
     try {
       const result = await this.stytchService.authenticateMagicLink(token);
+      // 43200 minutes = 30 days. Convert to milliseconds correctly
       const expiresAt = new Date(Date.now() + 43200 * 60 * 1000);
       const email = result.user?.emails?.[0]?.email;
+
+      // Use the session expiry from Stytch if available
+      const sessionExpiresAt = result.session?.expires_at
+        ? new Date(result.session.expires_at)
+        : expiresAt;
 
       return {
         sessionToken: result.session_token,
         userId: result.user_id,
         email,
         name: result.user?.name?.first_name,
-        expiresAt,
+        expiresAt: sessionExpiresAt,
       };
     } catch (error) {
       this.logger.error(`Magic link authentication failed: ${error.message}`);
