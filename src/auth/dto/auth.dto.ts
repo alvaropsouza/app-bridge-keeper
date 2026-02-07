@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { MAGIC_LINK_LOCALES, MagicLinkLocale } from '../locale.enum';
 
 export class LoginDto {
   @ApiProperty({
@@ -6,6 +7,14 @@ export class LoginDto {
     example: 'user@example.com',
   })
   email: string;
+
+  @ApiProperty({
+    description: 'Preferred locale for the magic link content',
+    enum: MAGIC_LINK_LOCALES,
+    required: false,
+    example: MagicLinkLocale.PT_BR,
+  })
+  locale?: MagicLinkLocale;
 }
 
 export class AuthenticateDto {

@@ -10,7 +10,7 @@ export class AuthService {
 
   async initiateLogin(loginDto: LoginDto) {
     try {
-      const result = await this.stytchService.sendMagicLink(loginDto.email);
+      const result = await this.stytchService.sendMagicLink(loginDto.email, loginDto.locale);
 
       return {
         success: true,

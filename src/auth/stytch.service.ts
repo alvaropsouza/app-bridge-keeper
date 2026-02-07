@@ -9,6 +9,7 @@ import {
 import * as stytch from 'stytch';
 import { STYTCH_CONFIG } from '../config/stytch.config';
 import type { StytchConfig } from '../config/stytch.config';
+import { MagicLinkLocale, isMagicLinkLocale } from './locale.enum';
 
 @Injectable()
 export class StytchService {
@@ -28,7 +29,7 @@ export class StytchService {
     return this.client || null;
   }
 
-  async sendMagicLink(email: string) {
+  async sendMagicLink(email: string, locale?: MagicLinkLocale) {
     if (!this.client) {
       throw new Error('Stytch client not initialized');
     }
@@ -55,12 +56,17 @@ export class StytchService {
       }
 
       const login_magic_link_url = redirectUrl;
+      const resolvedLocale = this.resolveLocale(locale);
       const response = await this.client.magicLinks.email.loginOrCreate({
+        signup_expiration_minutes: 5,
+        locale: resolvedLocale,
         email,
         login_magic_link_url,
       });
 
-      this.logger.log(`Magic link requested for ${email} redirect=${login_magic_link_url}`);
+      this.logger.log(
+        `Magic link requested for ${email} redirect=${login_magic_link_url} locale=${resolvedLocale}`,
+      );
 
       return response;
     } catch (error) {
@@ -123,5 +129,18 @@ export class StytchService {
       this.logger.error(`Failed to revoke session: ${error.message}`);
       throw error;
     }
+  }
+
+  private resolveLocale(locale?: string | null): MagicLinkLocale {
+    if (!locale) {
+      return MagicLinkLocale.EN;
+    }
+
+    const normalized = locale.toLowerCase().replace('_', '-') as MagicLinkLocale;
+    if (isMagicLinkLocale(normalized)) {
+      return normalized;
+    }
+
+    return MagicLinkLocale.EN;
   }
 }
