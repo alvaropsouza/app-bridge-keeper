@@ -34,6 +34,20 @@ export class AuthenticateDto {
   type?: 'magic_link' | 'session';
 }
 
+export class RegisterDto {
+  @ApiProperty({
+    description: 'Full name of the user',
+    example: 'Maria da Silva',
+  })
+  name: string;
+
+  @ApiProperty({
+    description: 'Email address of the user',
+    example: 'maria@empresa.com.br',
+  })
+  email: string;
+}
+
 export interface SessionInfo {
   sessionToken: string;
   userId: string;

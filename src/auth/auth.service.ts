@@ -1,12 +1,25 @@
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { StytchService } from './stytch.service';
-import { LoginDto, SessionInfo } from './dto/auth.dto';
+import { LoginDto, RegisterDto, SessionInfo } from './dto/auth.dto';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(private readonly stytchService: StytchService) {}
+
+  async register(registerDto: RegisterDto) {
+    try {
+      await this.stytchService.ensureUserExists(registerDto.email, registerDto.name);
+      return {
+        success: true,
+        message: 'User registered in Stytch successfully',
+      };
+    } catch (error) {
+      this.logger.error(`Stytch registration failed: ${error.message}`);
+      throw new UnauthorizedException('Unable to register user in Stytch');
+    }
+  }
 
   async initiateLogin(loginDto: LoginDto) {
     try {
