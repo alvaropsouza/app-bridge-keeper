@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { AuthenticateDto, LoginDto, RegisterDto } from './dto/auth.dto';
+import { AuthenticateDto, EnsureUserDto, LoginDto, RegisterDto } from './dto/auth.dto';
 import type { Request, Response } from 'express';
 
 const SESSION_COOKIE = 'kab_session';
@@ -69,6 +69,13 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Login initiated successfully' })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.initiateLogin(loginDto);
+  }
+
+  @Post('ensure-user')
+  @ApiOperation({ summary: 'Ensure user exists in Stytch by email' })
+  @ApiResponse({ status: 201, description: 'User exists in Stytch' })
+  async ensureUser(@Body() ensureUserDto: EnsureUserDto) {
+    return this.authService.ensureUser(ensureUserDto);
   }
 
   @Post('authenticate')

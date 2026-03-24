@@ -1,11 +1,4 @@
-import {
-  Injectable,
-  Inject,
-  Logger,
-  UnauthorizedException,
-  HttpStatus,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Inject, Logger, UnauthorizedException, HttpStatus } from '@nestjs/common';
 import * as stytch from 'stytch';
 import { STYTCH_CONFIG } from '../config/stytch.config';
 import type { StytchConfig } from '../config/stytch.config';
@@ -65,13 +58,6 @@ export class StytchService {
 
     try {
       const redirectUrl = process.env.FRONTEND_URL;
-      const user = await this.client.users.search(this.buildUserSearchQuery(email));
-
-      const noUsersFound = user.results.length === 0;
-      if (noUsersFound) {
-        throw new NotFoundException({ message: `User with email ${email} not found` });
-      }
-
       const login_magic_link_url = redirectUrl;
       const resolvedLocale = this.resolveLocale(locale);
       const response = await this.client.magicLinks.email.loginOrCreate({

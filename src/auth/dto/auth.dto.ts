@@ -48,6 +48,21 @@ export class RegisterDto {
   email: string;
 }
 
+export class EnsureUserDto {
+  @ApiProperty({
+    description: 'Email address of the user',
+    example: 'maria@empresa.com.br',
+  })
+  email: string;
+
+  @ApiProperty({
+    description: 'Full name of the user',
+    example: 'Maria da Silva',
+    required: false,
+  })
+  name?: string;
+}
+
 export interface SessionInfo {
   sessionToken: string;
   userId: string;
