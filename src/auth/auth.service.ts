@@ -35,8 +35,10 @@ export class AuthService {
   }
 
   async initiateLogin(loginDto: LoginDto) {
+    const email = loginDto.email.toLowerCase().trim();
+
     try {
-      const result = await this.stytchService.sendMagicLink(loginDto.email, loginDto.locale);
+      const result = await this.stytchService.sendMagicLink(email, loginDto.locale);
 
       return {
         success: true,
@@ -44,6 +46,10 @@ export class AuthService {
         requestId: result.request_id,
       };
     } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
       this.logger.error(`Login initiation failed: ${error.message}`);
       throw new UnauthorizedException('Unable to initiate login');
     }

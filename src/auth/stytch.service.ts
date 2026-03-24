@@ -60,8 +60,8 @@ export class StytchService {
       const redirectUrl = process.env.FRONTEND_URL;
       const login_magic_link_url = redirectUrl;
       const resolvedLocale = this.resolveLocale(locale);
-      const response = await this.client.magicLinks.email.loginOrCreate({
-        signup_expiration_minutes: 5,
+      const response = await this.client.magicLinks.email.send({
+        login_expiration_minutes: 5,
         locale: resolvedLocale,
         email,
         login_magic_link_url,
@@ -73,9 +73,15 @@ export class StytchService {
 
       return response;
     } catch (error) {
+      if (error?.error_type === 'email_not_found') {
+        throw new UnauthorizedException({
+          message: 'Email nao cadastrado. Crie sua conta antes de entrar.',
+          code: HttpStatus.NOT_FOUND,
+        });
+      }
       throw new UnauthorizedException({
-        message: error?.response?.message ?? `Failed to send magic link ${JSON.stringify(error)}`,
-        code: error?.status ?? HttpStatus.UNAUTHORIZED,
+        message: error?.error_message ?? 'Falha ao enviar o link magico. Tente novamente.',
+        code: error?.status_code ?? HttpStatus.UNAUTHORIZED,
       });
     }
   }
