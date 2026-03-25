@@ -27,8 +27,12 @@
     "@nestjs/platform-express": "^11.1.17",
     "@nestjs/serve-static": "^5.0.4",
     "@nestjs/swagger": "^11.2.6",
+    "@nestjs/throttler": "^6.5.0",
     "axios": "^1.13.6",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.4",
     "cookie-parser": "^1.4.7",
+    "helmet": "^8.1.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "stytch": "^12.43.1"
