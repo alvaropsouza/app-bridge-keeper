@@ -7,6 +7,7 @@ import {
   Query,
   BadRequestException,
   UnauthorizedException,
+  ForbiddenException,
   Req,
   Res,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { AuthenticateDto, EnsureUserDto, LoginDto, RegisterDto } from './dto/aut
 import type { Request, Response } from 'express';
 
 const SESSION_COOKIE = 'kab_session';
+const SERVICE_TOKEN_HEADER = 'x-service-token';
 const isProd = process.env.NODE_ENV === 'production';
 
 const buildCookieOptions = (maxAge?: number) => {
@@ -57,10 +59,26 @@ const toUserPayload = (sessionInfo) => ({
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  private assertInternalServiceRequest(serviceToken?: string): void {
+    const expectedToken = process.env.INTERNAL_SERVICE_TOKEN?.trim();
+
+    if (!expectedToken) {
+      throw new ForbiddenException('INTERNAL_SERVICE_TOKEN is not configured');
+    }
+
+    if (!serviceToken || serviceToken !== expectedToken) {
+      throw new UnauthorizedException('Invalid internal service token');
+    }
+  }
+
   @Post('register')
   @ApiOperation({ summary: 'Register user in Stytch only' })
   @ApiResponse({ status: 201, description: 'User registered in Stytch successfully' })
-  async register(@Body() registerDto: RegisterDto) {
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Headers(SERVICE_TOKEN_HEADER) serviceToken?: string,
+  ) {
+    this.assertInternalServiceRequest(serviceToken);
     return this.authService.register(registerDto);
   }
 
@@ -74,7 +92,11 @@ export class AuthController {
   @Post('ensure-user')
   @ApiOperation({ summary: 'Ensure user exists in Stytch by email' })
   @ApiResponse({ status: 201, description: 'User exists in Stytch' })
-  async ensureUser(@Body() ensureUserDto: EnsureUserDto) {
+  async ensureUser(
+    @Body() ensureUserDto: EnsureUserDto,
+    @Headers(SERVICE_TOKEN_HEADER) serviceToken?: string,
+  ) {
+    this.assertInternalServiceRequest(serviceToken);
     return this.authService.ensureUser(ensureUserDto);
   }
 
