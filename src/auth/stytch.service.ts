@@ -2,7 +2,6 @@ import { Injectable, Inject, Logger, UnauthorizedException, HttpStatus } from '@
 import * as stytch from 'stytch';
 import { STYTCH_CONFIG } from '../config/stytch.config';
 import type { StytchConfig } from '../config/stytch.config';
-import { MagicLinkLocale, isMagicLinkLocale } from './locale.enum';
 
 @Injectable()
 export class StytchService {
@@ -10,11 +9,14 @@ export class StytchService {
   private client: stytch.Client;
 
   constructor(@Inject(STYTCH_CONFIG) private config: StytchConfig) {
-    if (!config.projectId || !config.secret) {
+    if (!this.config.projectId || !this.config.secret) {
       this.logger.warn('Missing Stytch credentials; running without client');
       return;
     }
-    this.client = new stytch.Client({ project_id: config.projectId, secret: config.secret });
+    this.client = new stytch.Client({
+      project_id: this.config.projectId,
+      secret: this.config.secret,
+    });
     this.logger.log('Stytch client ready');
   }
 
@@ -51,7 +53,7 @@ export class StytchService {
     this.logger.log(`User created in Stytch for email=${normalizedEmail}`);
   }
 
-  async sendMagicLink(email: string, locale?: MagicLinkLocale) {
+  async sendMagicLink(email: string, locale?: string) {
     if (!this.client) {
       throw new Error('Stytch client not initialized');
     }
@@ -59,16 +61,15 @@ export class StytchService {
     try {
       const redirectUrl = process.env.FRONTEND_URL;
       const login_magic_link_url = redirectUrl;
-      const resolvedLocale = this.resolveLocale(locale);
       const response = await this.client.magicLinks.email.send({
         login_expiration_minutes: 5,
-        locale: resolvedLocale,
+        ...(locale ? { locale } : {}),
         email,
         login_magic_link_url,
       });
 
       this.logger.log(
-        `Magic link requested for ${email} redirect=${login_magic_link_url} locale=${resolvedLocale}`,
+        `Magic link requested for ${email} redirect=${login_magic_link_url} locale=${locale ?? 'default'}`,
       );
 
       return response;
@@ -152,18 +153,5 @@ export class StytchService {
         ],
       },
     };
-  }
-
-  private resolveLocale(locale?: string | null): MagicLinkLocale {
-    if (!locale) {
-      return MagicLinkLocale.EN;
-    }
-
-    const normalized = locale.toLowerCase().replace('_', '-') as MagicLinkLocale;
-    if (isMagicLinkLocale(normalized)) {
-      return normalized;
-    }
-
-    return MagicLinkLocale.EN;
   }
 }
