@@ -10,7 +10,7 @@ export class StytchService {
 
   constructor(@Inject(STYTCH_CONFIG) private config: StytchConfig) {
     if (!this.config.projectId || !this.config.secret) {
-      this.logger.warn('Missing Stytch credentials; running without client');
+      this.logger.error('Missing Stytch credentials; running without client');
       return;
     }
     this.client = new stytch.Client({
@@ -97,8 +97,7 @@ export class StytchService {
         token,
         session_duration_minutes: 43200,
       });
-      this.logger.log('Magic link authenticated (30-day session)');
-      this.logger.debug('Magic link response:', JSON.stringify(response, null, 2));
+      this.logger.log(`Magic link authenticated (30-day session) for userId=${response.user_id}`);
       return response;
     } catch (error) {
       this.logger.error(`Failed to authenticate magic link: ${error.message}`);
@@ -115,8 +114,7 @@ export class StytchService {
       const response = await this.client.sessions.authenticate({
         session_token: sessionToken,
       });
-      this.logger.log('Session authenticated successfully');
-      this.logger.debug('Session response:', JSON.stringify(response, null, 2));
+      this.logger.log(`Session authenticated successfully for userId=${response.user.user_id}`);
       return response;
     } catch (error) {
       this.logger.error(`Failed to authenticate session: ${error.message}`);
