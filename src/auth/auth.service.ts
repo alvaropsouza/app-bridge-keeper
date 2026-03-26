@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { StytchService } from './stytch.service';
 import { EnsureUserDto, LoginDto, RegisterDto, SessionInfo } from './dto/auth.dto';
 

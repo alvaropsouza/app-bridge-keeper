@@ -14,6 +14,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { AuthenticateDto, EnsureUserDto, LoginDto, RegisterDto } from './dto/auth.dto';
+import type { SessionInfo } from './dto/auth.dto';
 import type { Request, Response } from 'express';
 
 const SESSION_COOKIE = 'kab_session';
@@ -46,7 +47,7 @@ const extractToken = (authorization?: string, req?: Request) => {
   return cookieToken || null;
 };
 
-const toUserPayload = (sessionInfo) => ({
+const toUserPayload = (sessionInfo: SessionInfo) => ({
   userId: sessionInfo.userId,
   email: sessionInfo.email,
   name: sessionInfo.name,
