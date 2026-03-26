@@ -9,14 +9,10 @@ export class AuthService {
   constructor(private readonly stytchService: StytchService) {}
 
   async register(registerDto: RegisterDto) {
-    this.logger.log(
-      `Register requested for email=${registerDto.email.toLowerCase().trim()}`,
-    );
+    this.logger.log(`Register requested for email=${registerDto.email.toLowerCase().trim()}`);
     try {
       await this.stytchService.ensureUserExists(registerDto.email, registerDto.name);
-      this.logger.log(
-        `Register completed for email=${registerDto.email.toLowerCase().trim()}`,
-      );
+      this.logger.log(`Register completed for email=${registerDto.email.toLowerCase().trim()}`);
       return {
         success: true,
         message: 'User registered in Stytch successfully',
@@ -28,9 +24,7 @@ export class AuthService {
   }
 
   async ensureUser(ensureUserDto: EnsureUserDto) {
-    this.logger.log(
-      `Ensure user requested for email=${ensureUserDto.email.toLowerCase().trim()}`,
-    );
+    this.logger.log(`Ensure user requested for email=${ensureUserDto.email.toLowerCase().trim()}`);
     try {
       await this.stytchService.ensureUserExists(ensureUserDto.email, ensureUserDto.name);
       this.logger.log(
@@ -92,9 +86,7 @@ export class AuthService {
         expiresAt: sessionExpiresAt,
       };
 
-      this.logger.log(
-        `Magic link authentication completed for userId=${sessionInfo.userId}`,
-      );
+      this.logger.log(`Magic link authentication completed for userId=${sessionInfo.userId}`);
 
       return sessionInfo;
     } catch (error) {
