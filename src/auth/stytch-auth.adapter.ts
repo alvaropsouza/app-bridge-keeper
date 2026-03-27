@@ -1,16 +1,15 @@
-import { HttpStatus, Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import * as stytch from 'stytch';
-import { STYTCH_CONFIG } from '../config/stytch.config';
-import type { StytchConfig } from '../config/stytch.config';
+import type { StytchConfig } from 'src/config/stytch.config';
 import type { AuthProvider, LoginRequestResult } from './auth-provider.interface';
 import type { SessionInfo } from './dto/auth.dto';
 
 @Injectable()
-export class StytchAuthProvider implements AuthProvider {
-  private readonly logger = new Logger(StytchAuthProvider.name);
+export class StytchAuthAdapter implements AuthProvider {
+  private readonly logger = new Logger(StytchAuthAdapter.name);
   private client: stytch.Client;
 
-  constructor(@Inject(STYTCH_CONFIG) private readonly config: StytchConfig) {
+  constructor(private readonly config: StytchConfig) {
     if (!this.config.projectId || !this.config.secret) {
       this.logger.error('Missing Stytch credentials; running without client');
       return;

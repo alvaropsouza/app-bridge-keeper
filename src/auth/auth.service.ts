@@ -1,18 +1,32 @@
-import { Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { AUTH_PROVIDER } from './auth-provider.interface';
-import type { AuthProvider } from './auth-provider.interface';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { EnsureUserDto, LoginDto, RegisterDto, SessionInfo } from './dto/auth.dto';
+import { RegisterUserUseCase } from './use-cases/register-user.use-case';
+import { EnsureUserUseCase } from './use-cases/ensure-user.use-case';
+import { InitiateLoginUseCase } from './use-cases/initiate-login.use-case';
+import { AuthenticateMagicLinkUseCase } from './use-cases/authenticate-magic-link.use-case';
+import { ValidateSessionUseCase } from './use-cases/validate-session.use-case';
+import { LogoutUseCase } from './use-cases/logout.use-case';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  constructor(@Inject(AUTH_PROVIDER) private readonly authProvider: AuthProvider) {}
+  constructor(
+    private readonly registerUserUseCase: RegisterUserUseCase,
+    private readonly ensureUserUseCase: EnsureUserUseCase,
+    private readonly initiateLoginUseCase: InitiateLoginUseCase,
+    private readonly authenticateMagicLinkUseCase: AuthenticateMagicLinkUseCase,
+    private readonly validateSessionUseCase: ValidateSessionUseCase,
+    private readonly logoutUseCase: LogoutUseCase,
+  ) {}
 
   async register(registerDto: RegisterDto) {
     this.logger.log(`Register requested for email=${registerDto.email.toLowerCase().trim()}`);
     try {
-      await this.authProvider.ensureUserExists(registerDto.email, registerDto.name);
+      await this.registerUserUseCase.execute({
+        email: registerDto.email,
+        name: registerDto.name,
+      });
       this.logger.log(`Register completed for email=${registerDto.email.toLowerCase().trim()}`);
       return {
         success: true,
@@ -27,7 +41,10 @@ export class AuthService {
   async ensureUser(ensureUserDto: EnsureUserDto) {
     this.logger.log(`Ensure user requested for email=${ensureUserDto.email.toLowerCase().trim()}`);
     try {
-      await this.authProvider.ensureUserExists(ensureUserDto.email, ensureUserDto.name);
+      await this.ensureUserUseCase.execute({
+        email: ensureUserDto.email,
+        name: ensureUserDto.name,
+      });
       this.logger.log(
         `Ensure user completed for email=${ensureUserDto.email.toLowerCase().trim()}`,
       );
@@ -46,7 +63,10 @@ export class AuthService {
     this.logger.log(`Login initiation requested for email=${email}`);
 
     try {
-      const result = await this.authProvider.sendMagicLink(email, loginDto.locale);
+      const result = await this.initiateLoginUseCase.execute({
+        email,
+        locale: loginDto.locale,
+      });
       this.logger.log(
         `Login initiation completed for email=${email} requestId=${result.requestId}`,
       );
@@ -69,7 +89,7 @@ export class AuthService {
   async authenticateMagicLink(token: string): Promise<SessionInfo> {
     this.logger.log('Magic link authentication requested');
     try {
-      const sessionInfo = await this.authProvider.authenticateMagicLink(token);
+      const sessionInfo = await this.authenticateMagicLinkUseCase.execute(token);
 
       this.logger.log(`Magic link authentication completed for userId=${sessionInfo.userId}`);
 
@@ -83,7 +103,7 @@ export class AuthService {
   async validateSession(sessionToken: string): Promise<SessionInfo> {
     this.logger.log('Session validation requested');
     try {
-      const sessionInfo = await this.authProvider.validateSession(sessionToken);
+      const sessionInfo = await this.validateSessionUseCase.execute(sessionToken);
 
       this.logger.log(`Session validation completed for userId=${sessionInfo.userId}`);
 
@@ -97,7 +117,7 @@ export class AuthService {
   async logout(sessionToken: string) {
     this.logger.log('Logout requested');
     try {
-      await this.authProvider.revokeSession(sessionToken);
+      await this.logoutUseCase.execute(sessionToken);
       this.logger.log('Logout completed');
 
       return {

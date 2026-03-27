@@ -1,17 +1,16 @@
-import { HttpStatus, Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { SUPABASE_CONFIG } from '../config/supabase.config';
-import type { SupabaseConfig } from '../config/supabase.config';
+import type { SupabaseConfig } from 'src/config/supabase.config';
 import type { AuthProvider, LoginRequestResult } from './auth-provider.interface';
 import type { SessionInfo } from './dto/auth.dto';
 
 @Injectable()
-export class SupabaseAuthProvider implements AuthProvider {
-  private readonly logger = new Logger(SupabaseAuthProvider.name);
+export class SupabaseAuthAdapter implements AuthProvider {
+  private readonly logger = new Logger(SupabaseAuthAdapter.name);
   private readonly publishableClient: SupabaseClient;
   private readonly adminClient?: SupabaseClient;
 
-  constructor(@Inject(SUPABASE_CONFIG) private readonly config: SupabaseConfig) {
+  constructor(private readonly config: SupabaseConfig) {
     if (!this.config.url || !this.config.publishableKey) {
       throw new Error(
         'Missing Supabase credentials. Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY',
@@ -96,8 +95,6 @@ export class SupabaseAuthProvider implements AuthProvider {
     });
 
     if (error) {
-      // User exists in the application DB but was never provisioned in Supabase
-      // (e.g. created before the Supabase migration). Provision lazily and retry.
       if (error.message?.toLowerCase().includes('signups not allowed') && this.adminClient) {
         this.logger.log(`Lazy-provisioning Supabase account for email=${email}`);
         await this.ensureUserExists(email);
@@ -183,7 +180,6 @@ export class SupabaseAuthProvider implements AuthProvider {
       });
     }
 
-    // Admin signout revokes refresh tokens for the provided JWT scope.
     const { error } = await this.adminClient.auth.admin.signOut(sessionToken, 'global');
     if (error) {
       throw new UnauthorizedException({
