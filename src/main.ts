@@ -36,7 +36,7 @@ async function bootstrap() {
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('Bridge Keeper API')
-      .setDescription('Authentication Gateway with Stytch')
+      .setDescription('Authentication Gateway with Supabase')
       .setVersion('1.0')
       .addBearerAuth()
       .build();

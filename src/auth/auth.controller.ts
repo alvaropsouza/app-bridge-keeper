@@ -117,7 +117,7 @@ export class AuthController {
 
     let finalType = normalizedType as 'magic_link' | 'session' | undefined;
     if (!finalType) {
-      if (/^sess_/i.test(authenticateDto.token)) {
+      if (/^sess_/i.test(authenticateDto.token) || authenticateDto.token.split('.').length === 3) {
         finalType = 'session';
       } else {
         finalType = 'magic_link';
@@ -150,17 +150,21 @@ export class AuthController {
   }
 
   @Get('callback')
-  @ApiOperation({ summary: 'Magic link callback endpoint (consumes stytch_token query param)' })
+  @ApiOperation({ summary: 'Magic link callback endpoint (consumes token_hash or token)' })
   @ApiResponse({ status: 200, description: 'Authentication successful' })
-  @ApiResponse({ status: 400, description: 'Missing stytch_token parameter' })
+  @ApiResponse({ status: 400, description: 'Missing token parameter' })
   async magicLinkCallback(
-    @Query('stytch_token') stytchToken: string,
+    @Query('token_hash') tokenHash: string,
+    @Query('token') token: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    if (!stytchToken) {
-      throw new BadRequestException('Missing stytch_token in query parameters');
+    const callbackToken = tokenHash || token;
+
+    if (!callbackToken) {
+      throw new BadRequestException('Missing token in query parameters');
     }
-    const sessionInfo = await this.authService.authenticateMagicLink(stytchToken);
+
+    const sessionInfo = await this.authService.authenticateMagicLink(callbackToken);
     const maxAge = Math.max(0, sessionInfo.expiresAt.getTime() - Date.now());
     res.cookie(SESSION_COOKIE, sessionInfo.sessionToken, buildCookieOptions(maxAge));
     return toUserPayload(sessionInfo);
@@ -191,14 +195,28 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user information' })
   @ApiResponse({ status: 200, description: 'User information retrieved successfully' })
   @ApiResponse({ status: 401, description: 'No authorization header provided' })
-  async getMe(@Headers('authorization') authorization: string, @Req() req: Request) {
+  async getMe(
+    @Headers('authorization') authorization: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const token = extractToken(authorization, req);
     if (!token) {
+      if (req.cookies?.[SESSION_COOKIE]) {
+        res.clearCookie(SESSION_COOKIE, buildCookieOptions());
+      }
       throw new UnauthorizedException('No authorization header or cookie provided');
     }
 
-    const sessionInfo = await this.authService.validateSession(token);
-    return toUserPayload(sessionInfo);
+    try {
+      const sessionInfo = await this.authService.validateSession(token);
+      return toUserPayload(sessionInfo);
+    } catch (error) {
+      if (!authorization && req.cookies?.[SESSION_COOKIE]) {
+        res.clearCookie(SESSION_COOKIE, buildCookieOptions());
+      }
+      throw error;
+    }
   }
 
   @Get('validate')
@@ -206,7 +224,11 @@ export class AuthController {
   @ApiOperation({ summary: 'Validate session token' })
   @ApiResponse({ status: 200, description: 'Session is valid' })
   @ApiResponse({ status: 401, description: 'No authorization header provided or invalid session' })
-  async validateSession(@Headers('authorization') authorization: string, @Req() req: Request) {
+  async validateSession(
+    @Headers('authorization') authorization: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const token = extractToken(authorization, req);
 
     console.log(
@@ -218,11 +240,24 @@ export class AuthController {
 
     if (!token) {
       console.log('[Validate] No token found, returning 401');
+      // Clear any stale cookie so the browser stops sending it
+      if (req.cookies?.[SESSION_COOKIE]) {
+        res.clearCookie(SESSION_COOKIE, buildCookieOptions());
+      }
       throw new UnauthorizedException('No authorization header or cookie provided');
     }
 
-    const sessionInfo = await this.authService.validateSession(token);
-    console.log('[Validate] Session valid. Expires at:', sessionInfo.expiresAt);
-    return { valid: true, user: toUserPayload(sessionInfo), expiresAt: sessionInfo.expiresAt };
+    try {
+      const sessionInfo = await this.authService.validateSession(token);
+      console.log('[Validate] Session valid. Expires at:', sessionInfo.expiresAt);
+      return { valid: true, user: toUserPayload(sessionInfo), expiresAt: sessionInfo.expiresAt };
+    } catch (error) {
+      // If the invalid token came from the cookie, expire it now so the browser
+      // stops sending it on every subsequent request.
+      if (!authorization && req.cookies?.[SESSION_COOKIE]) {
+        res.clearCookie(SESSION_COOKIE, buildCookieOptions());
+      }
+      throw error;
+    }
   }
 }

@@ -1,10 +1,10 @@
 # App Bridge Keeper
 
-Bridge keeper is a backend application built with NestJS that manages access control and authentication using Stytch for user session management.
+Bridge keeper is a backend application built with NestJS that manages access control and authentication using Supabase for user session management.
 
 ## Features
 
-- 🔐 Authentication via Stytch B2B Magic Links
+- 🔐 Authentication via Supabase Magic Links / OTP
 - 👤 Session management and validation
 - 🔄 Secure user logout
 - 📊 Member information retrieval
@@ -15,50 +15,58 @@ Bridge keeper is a backend application built with NestJS that manages access con
 
 - Node.js (v18 or higher)
 - npm or yarn
-- Stytch B2B account ([Sign up here](https://stytch.com))
+- Supabase account ([Sign up here](https://supabase.com))
 
 ## Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/alvaropsouza/app-bridge-keeper.git
 cd app-bridge-keeper
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Configure environment variables:
+
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and add your Stytch credentials:
+Edit `.env` and add your Supabase credentials:
+
 ```env
-STYTCH_PROJECT_ID=your-project-id-here
-STYTCH_SECRET=your-secret-here
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx
+SUPABASE_SECRET_KEY=sb_secret_xxx
+FRONTEND_URL=http://localhost:3001
 PORT=3000
 NODE_ENV=development
 ```
 
-## Getting Stytch Credentials
+## Getting Supabase Credentials
 
-1. Go to [Stytch Dashboard](https://stytch.com/dashboard)
-2. Create a new B2B project or select an existing one
-3. Navigate to API Keys section
-4. Copy your Project ID and Secret
+1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
+2. Create a project or select an existing one
+3. Open Project Settings > API
+4. Copy Project URL, publishable key and secret key
 5. Add them to your `.env` file
 
 ## Running the Application
 
 ### Development mode
+
 ```bash
 npm run start:dev
 ```
 
 ### Production mode
+
 ```bash
 npm run build
 npm run start:prod
@@ -69,15 +77,18 @@ The application will start on `http://localhost:3000` (or the port specified in 
 ## API Endpoints
 
 ### Health Check
+
 ```
 GET /
 GET /health
 ```
+
 Returns application status.
 
 ### Authentication
 
 #### Initiate Login (Send Magic Link)
+
 ```
 POST /auth/login
 Content-Type: application/json
@@ -89,6 +100,7 @@ Content-Type: application/json
 ```
 
 #### Authenticate Magic Link
+
 ```
 POST /auth/authenticate
 Content-Type: application/json
@@ -100,12 +112,14 @@ Content-Type: application/json
 ```
 
 #### Validate Session
+
 ```
 GET /auth/validate
 Authorization: Bearer <session-token>
 ```
 
 #### Get Current User Info
+
 ```
 GET /auth/me
 Authorization: Bearer <session-token>
@@ -113,6 +127,7 @@ X-Organization-Id: org-test-123
 ```
 
 #### Logout
+
 ```
 POST /auth/logout
 Authorization: Bearer <session-token>
@@ -121,21 +136,25 @@ Authorization: Bearer <session-token>
 ## Testing
 
 ### Run all tests
+
 ```bash
 npm test
 ```
 
 ### Run tests with coverage
+
 ```bash
 npm run test:cov
 ```
 
 ### Run e2e tests
+
 ```bash
 npm run test:e2e
 ```
 
 ### Run tests in watch mode
+
 ```bash
 npm run test:watch
 ```
@@ -176,27 +195,29 @@ app-bridge-keeper/
 ## Development
 
 ### Linting
+
 ```bash
 npm run lint
 ```
 
 ### Format code
+
 ```bash
 npm run format
 ```
 
 ## Architecture
 
-### Stytch Integration
+### Supabase Integration
 
-The application uses Stytch B2B SDK for authentication and session management:
+The application uses Supabase Auth SDK for authentication and session management:
 
-- **StytchService**: Wraps Stytch SDK client and provides methods for:
+- **SupabaseAuthProvider**: Wraps Supabase Auth SDK client and provides methods for:
   - Sending magic links
   - Authenticating magic links
   - Session validation
   - Session revocation
-  - Member information retrieval
+  - User provisioning (admin operations)
 
 - **AuthService**: Business logic layer that handles:
   - Login flow coordination
@@ -216,21 +237,23 @@ The application uses Stytch B2B SDK for authentication and session management:
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `STYTCH_PROJECT_ID` | Your Stytch project ID | Yes |
-| `STYTCH_SECRET` | Your Stytch secret key | Yes |
-| `PORT` | Application port (default: 3000) | No |
-| `NODE_ENV` | Environment (development/production) | No |
-| `CORS_ORIGINS` | Comma-separated allowed CORS origins | No |
+| Variable                    | Description                             | Required |
+| --------------------------- | --------------------------------------- | -------- |
+| `SUPABASE_URL`              | Supabase project URL                    | Yes      |
+| `SUPABASE_PUBLISHABLE_KEY`  | Supabase publishable key                | Yes      |
+| `SUPABASE_SECRET_KEY`       | Supabase secret key (server only)       | Yes      |
+| `FRONTEND_URL`              | Frontend redirect URL for magic link    | Yes      |
+| `PORT`                      | Application port (default: 3000)        | No       |
+| `NODE_ENV`                  | Environment (development/production)    | No       |
+| `CORS_ORIGINS`              | Comma-separated allowed CORS origins    | No       |
 
 ## Security Considerations
 
-- Never commit `.env` file or expose Stytch credentials
+- Never commit `.env` file or expose Supabase credentials
 - Always use HTTPS in production
 - Validate session tokens on every protected endpoint
 - Implement rate limiting for authentication endpoints
-- Use environment-specific Stytch projects (dev/staging/prod)
+- Use environment-specific Supabase projects (dev/staging/prod)
 - Configure CORS properly for production (specify allowed origins in `CORS_ORIGINS` environment variable)
 - In production, either disable CORS or specify exact allowed origins
 
@@ -250,6 +273,7 @@ ISC
 ## Support
 
 For issues and questions:
+
 - Create an issue in the GitHub repository
-- Check [Stytch Documentation](https://stytch.com/docs/b2b)
+- Check [Supabase Auth Documentation](https://supabase.com/docs/guides/auth)
 - Check [NestJS Documentation](https://docs.nestjs.com)

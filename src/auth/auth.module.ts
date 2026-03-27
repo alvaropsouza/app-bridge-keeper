@@ -3,28 +3,30 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { AUTH_PROVIDER } from './auth-provider.interface';
-import { StytchAuthProvider } from './stytch-auth.provider';
-import { STYTCH_CONFIG } from '../config/stytch.config';
+import { SupabaseAuthProvider } from './supabase-auth.provider';
+import { SUPABASE_CONFIG } from 'src/config/supabase.config';
 
 @Module({
   imports: [ConfigModule],
   controllers: [AuthController],
   providers: [
     AuthService,
-    StytchAuthProvider,
+    SupabaseAuthProvider,
     {
       provide: AUTH_PROVIDER,
-      useExisting: StytchAuthProvider,
+      useExisting: SupabaseAuthProvider,
     },
     {
-      provide: STYTCH_CONFIG,
+      provide: SUPABASE_CONFIG,
       useFactory: (configService: ConfigService) => ({
-        projectId: configService.get<string>('STYTCH_PROJECT_ID'),
-        secret: configService.get<string>('STYTCH_SECRET'),
+        url: configService.get<string>('SUPABASE_URL'),
+        publishableKey: configService.get<string>('SUPABASE_PUBLISHABLE_KEY'),
+        secretKey: configService.get<string>('SUPABASE_SECRET_KEY'),
+        frontendUrl: configService.get<string>('FRONTEND_URL'),
       }),
       inject: [ConfigService],
     },
   ],
-  exports: [AuthService, AUTH_PROVIDER, StytchAuthProvider],
+  exports: [AuthService, AUTH_PROVIDER, SupabaseAuthProvider],
 })
 export class AuthModule {}
