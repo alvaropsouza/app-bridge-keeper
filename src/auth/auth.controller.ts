@@ -73,8 +73,8 @@ export class AuthController {
   }
 
   @Post('register')
-  @ApiOperation({ summary: 'Register user in Stytch only' })
-  @ApiResponse({ status: 201, description: 'User registered in Stytch successfully' })
+  @ApiOperation({ summary: 'Register user in the configured auth provider' })
+  @ApiResponse({ status: 201, description: 'User registered successfully' })
   async register(
     @Body() registerDto: RegisterDto,
     @Headers(SERVICE_TOKEN_HEADER) serviceToken?: string,
@@ -91,8 +91,8 @@ export class AuthController {
   }
 
   @Post('ensure-user')
-  @ApiOperation({ summary: 'Ensure user exists in Stytch by email' })
-  @ApiResponse({ status: 201, description: 'User exists in Stytch' })
+  @ApiOperation({ summary: 'Ensure user exists in the configured auth provider by email' })
+  @ApiResponse({ status: 201, description: 'User exists in the configured auth provider' })
   async ensureUser(
     @Body() ensureUserDto: EnsureUserDto,
     @Headers(SERVICE_TOKEN_HEADER) serviceToken?: string,

@@ -1,42 +1,43 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { StytchService } from './stytch.service';
+import { Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { AUTH_PROVIDER } from './auth-provider.interface';
+import type { AuthProvider } from './auth-provider.interface';
 import { EnsureUserDto, LoginDto, RegisterDto, SessionInfo } from './dto/auth.dto';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  constructor(private readonly stytchService: StytchService) {}
+  constructor(@Inject(AUTH_PROVIDER) private readonly authProvider: AuthProvider) {}
 
   async register(registerDto: RegisterDto) {
     this.logger.log(`Register requested for email=${registerDto.email.toLowerCase().trim()}`);
     try {
-      await this.stytchService.ensureUserExists(registerDto.email, registerDto.name);
+      await this.authProvider.ensureUserExists(registerDto.email, registerDto.name);
       this.logger.log(`Register completed for email=${registerDto.email.toLowerCase().trim()}`);
       return {
         success: true,
-        message: 'User registered in Stytch successfully',
+        message: 'User registered successfully',
       };
     } catch (error) {
-      this.logger.error(`Stytch registration failed: ${error.message}`);
-      throw new UnauthorizedException('Unable to register user in Stytch');
+      this.logger.error(`Auth provider registration failed: ${error.message}`);
+      throw new UnauthorizedException('Unable to register user');
     }
   }
 
   async ensureUser(ensureUserDto: EnsureUserDto) {
     this.logger.log(`Ensure user requested for email=${ensureUserDto.email.toLowerCase().trim()}`);
     try {
-      await this.stytchService.ensureUserExists(ensureUserDto.email, ensureUserDto.name);
+      await this.authProvider.ensureUserExists(ensureUserDto.email, ensureUserDto.name);
       this.logger.log(
         `Ensure user completed for email=${ensureUserDto.email.toLowerCase().trim()}`,
       );
       return {
         success: true,
-        message: 'User ensured in Stytch successfully',
+        message: 'User ensured successfully',
       };
     } catch (error) {
-      this.logger.error(`Stytch ensure-user failed: ${error.message}`);
-      throw new UnauthorizedException('Unable to ensure user in Stytch');
+      this.logger.error(`Auth provider ensure-user failed: ${error.message}`);
+      throw new UnauthorizedException('Unable to ensure user');
     }
   }
 
@@ -45,15 +46,15 @@ export class AuthService {
     this.logger.log(`Login initiation requested for email=${email}`);
 
     try {
-      const result = await this.stytchService.sendMagicLink(email, loginDto.locale);
+      const result = await this.authProvider.sendMagicLink(email, loginDto.locale);
       this.logger.log(
-        `Login initiation completed for email=${email} requestId=${result.request_id}`,
+        `Login initiation completed for email=${email} requestId=${result.requestId}`,
       );
 
       return {
         success: true,
         message: 'Magic link sent successfully',
-        requestId: result.request_id,
+        requestId: result.requestId,
       };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
@@ -68,23 +69,7 @@ export class AuthService {
   async authenticateMagicLink(token: string): Promise<SessionInfo> {
     this.logger.log('Magic link authentication requested');
     try {
-      const result = await this.stytchService.authenticateMagicLink(token);
-      // 43200 minutes = 30 days. Convert to milliseconds correctly
-      const expiresAt = new Date(Date.now() + 43200 * 60 * 1000);
-      const email = result.user?.emails?.[0]?.email;
-
-      // Use the session expiry from Stytch if available
-      const sessionExpiresAt = result.session?.expires_at
-        ? new Date(result.session.expires_at)
-        : expiresAt;
-
-      const sessionInfo = {
-        sessionToken: result.session_token,
-        userId: result.user_id,
-        email,
-        name: result.user?.name?.first_name,
-        expiresAt: sessionExpiresAt,
-      };
+      const sessionInfo = await this.authProvider.authenticateMagicLink(token);
 
       this.logger.log(`Magic link authentication completed for userId=${sessionInfo.userId}`);
 
@@ -98,18 +83,7 @@ export class AuthService {
   async validateSession(sessionToken: string): Promise<SessionInfo> {
     this.logger.log('Session validation requested');
     try {
-      const stytchResponse = await this.stytchService.authenticateSession(sessionToken);
-      const user = stytchResponse.user;
-      const session = stytchResponse.session;
-      const email = user?.emails?.[0]?.email;
-
-      const sessionInfo = {
-        sessionToken: sessionToken,
-        userId: user.user_id,
-        email,
-        name: user?.name?.first_name,
-        expiresAt: session.expires_at ? new Date(session.expires_at) : new Date(),
-      };
+      const sessionInfo = await this.authProvider.validateSession(sessionToken);
 
       this.logger.log(`Session validation completed for userId=${sessionInfo.userId}`);
 
@@ -123,7 +97,7 @@ export class AuthService {
   async logout(sessionToken: string) {
     this.logger.log('Logout requested');
     try {
-      await this.stytchService.revokeSession(sessionToken);
+      await this.authProvider.revokeSession(sessionToken);
       this.logger.log('Logout completed');
 
       return {

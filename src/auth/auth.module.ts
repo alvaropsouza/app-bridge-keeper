@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { StytchService } from './stytch.service';
+import { AUTH_PROVIDER } from './auth-provider.interface';
+import { StytchAuthProvider } from './stytch-auth.provider';
 import { STYTCH_CONFIG } from '../config/stytch.config';
 
 @Module({
@@ -10,7 +11,11 @@ import { STYTCH_CONFIG } from '../config/stytch.config';
   controllers: [AuthController],
   providers: [
     AuthService,
-    StytchService,
+    StytchAuthProvider,
+    {
+      provide: AUTH_PROVIDER,
+      useExisting: StytchAuthProvider,
+    },
     {
       provide: STYTCH_CONFIG,
       useFactory: (configService: ConfigService) => ({
@@ -20,6 +25,6 @@ import { STYTCH_CONFIG } from '../config/stytch.config';
       inject: [ConfigService],
     },
   ],
-  exports: [AuthService, StytchService],
+  exports: [AuthService, AUTH_PROVIDER, StytchAuthProvider],
 })
 export class AuthModule {}
