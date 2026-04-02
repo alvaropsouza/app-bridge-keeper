@@ -115,6 +115,13 @@ export class StytchAuthAdapter implements AuthProvider {
     }
   }
 
+  async refreshSession(_refreshToken: string): Promise<SessionInfo> {
+    throw new UnauthorizedException({
+      message: 'Refresh token flow is not supported for Stytch sessions',
+      code: HttpStatus.BAD_REQUEST,
+    });
+  }
+
   async revokeSession(sessionToken: string): Promise<void> {
     try {
       await this.getClientOrThrow().sessions.revoke({

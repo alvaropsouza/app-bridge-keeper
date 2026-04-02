@@ -11,6 +11,7 @@ import { InitiateLoginUseCase } from './use-cases/initiate-login.use-case';
 import { AuthenticateMagicLinkUseCase } from './use-cases/authenticate-magic-link.use-case';
 import { ValidateSessionUseCase } from './use-cases/validate-session.use-case';
 import { LogoutUseCase } from './use-cases/logout.use-case';
+import { RefreshSessionUseCase } from './use-cases/refresh-session.use-case';
 
 @Module({
   imports: [ConfigModule],
@@ -24,6 +25,7 @@ import { LogoutUseCase } from './use-cases/logout.use-case';
     InitiateLoginUseCase,
     AuthenticateMagicLinkUseCase,
     ValidateSessionUseCase,
+    RefreshSessionUseCase,
     LogoutUseCase,
     {
       provide: AUTH_PROVIDER,

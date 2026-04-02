@@ -6,6 +6,7 @@ import { InitiateLoginUseCase } from './use-cases/initiate-login.use-case';
 import { AuthenticateMagicLinkUseCase } from './use-cases/authenticate-magic-link.use-case';
 import { ValidateSessionUseCase } from './use-cases/validate-session.use-case';
 import { LogoutUseCase } from './use-cases/logout.use-case';
+import { RefreshSessionUseCase } from './use-cases/refresh-session.use-case';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +18,7 @@ export class AuthService {
     private readonly initiateLoginUseCase: InitiateLoginUseCase,
     private readonly authenticateMagicLinkUseCase: AuthenticateMagicLinkUseCase,
     private readonly validateSessionUseCase: ValidateSessionUseCase,
+    private readonly refreshSessionUseCase: RefreshSessionUseCase,
     private readonly logoutUseCase: LogoutUseCase,
   ) {}
 
@@ -111,6 +113,20 @@ export class AuthService {
     } catch (error) {
       this.logger.error(`Session validation failed: ${error.message}`);
       throw new UnauthorizedException('Invalid or expired session');
+    }
+  }
+
+  async refreshSession(refreshToken: string): Promise<SessionInfo> {
+    this.logger.log('Session refresh requested');
+    try {
+      const sessionInfo = await this.refreshSessionUseCase.execute(refreshToken);
+
+      this.logger.log(`Session refresh completed for userId=${sessionInfo.userId}`);
+
+      return sessionInfo;
+    } catch (error) {
+      this.logger.error(`Session refresh failed: ${error.message}`);
+      throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
 

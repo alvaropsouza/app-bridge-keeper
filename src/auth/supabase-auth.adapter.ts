@@ -146,6 +146,7 @@ export class SupabaseAuthAdapter implements AuthProvider {
 
     return {
       sessionToken: data.session.access_token,
+      refreshToken: data.session.refresh_token ?? undefined,
       userId: data.user.id,
       email: data.user.email ?? undefined,
       name: this.extractName(data.user),
@@ -169,6 +170,45 @@ export class SupabaseAuthAdapter implements AuthProvider {
       email: data.user.email ?? undefined,
       name: this.extractName(data.user),
       expiresAt: this.getExpiryFromJwt(sessionToken),
+    };
+  }
+
+  async refreshSession(refreshToken: string): Promise<SessionInfo> {
+    const normalizedRefreshToken = refreshToken.trim();
+
+    const { data, error } = await this.publishableClient.auth.refreshSession({
+      refresh_token: normalizedRefreshToken,
+    });
+
+    if (error || !data.session) {
+      throw new UnauthorizedException({
+        message: error?.message || 'Invalid refresh token',
+        code: HttpStatus.UNAUTHORIZED,
+      });
+    }
+
+    const accessToken = data.session.access_token;
+    const resolvedUser =
+      data.user ?? (await this.publishableClient.auth.getUser(accessToken)).data.user;
+
+    if (!resolvedUser) {
+      throw new UnauthorizedException({
+        message: 'Unable to resolve user from refreshed session',
+        code: HttpStatus.UNAUTHORIZED,
+      });
+    }
+
+    const expiresAt = data.session.expires_at
+      ? new Date(data.session.expires_at * 1000)
+      : this.getExpiryFromJwt(accessToken);
+
+    return {
+      sessionToken: accessToken,
+      refreshToken: data.session.refresh_token ?? normalizedRefreshToken,
+      userId: resolvedUser.id,
+      email: resolvedUser.email ?? undefined,
+      name: this.extractName(resolvedUser),
+      expiresAt,
     };
   }
 

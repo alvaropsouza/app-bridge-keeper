@@ -18,8 +18,14 @@ import type { SessionInfo } from './dto/auth.dto';
 import type { Request, Response } from 'express';
 
 const SESSION_COOKIE = 'kab_session';
+const REFRESH_COOKIE = 'kab_refresh';
 const SERVICE_TOKEN_HEADER = 'x-service-token';
 const isProd = process.env.NODE_ENV === 'production';
+const REFRESH_COOKIE_DAYS = Number(process.env.AUTH_REFRESH_COOKIE_DAYS ?? 30);
+const REFRESH_COOKIE_MAX_AGE_MS =
+  Number.isFinite(REFRESH_COOKIE_DAYS) && REFRESH_COOKIE_DAYS > 0
+    ? REFRESH_COOKIE_DAYS * 24 * 60 * 60 * 1000
+    : 30 * 24 * 60 * 60 * 1000;
 
 const buildCookieOptions = (maxAge?: number) => {
   const options = {
@@ -47,6 +53,8 @@ const extractToken = (authorization?: string, req?: Request) => {
   return cookieToken || null;
 };
 
+const extractRefreshToken = (req?: Request) => req?.cookies?.[REFRESH_COOKIE] || null;
+
 const toUserPayload = (sessionInfo: SessionInfo) => ({
   userId: sessionInfo.userId,
   email: sessionInfo.email,
@@ -59,6 +67,29 @@ const toUserPayload = (sessionInfo: SessionInfo) => ({
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  private setSessionCookies(res: Response, sessionInfo: SessionInfo): void {
+    const maxAge = Math.max(0, sessionInfo.expiresAt.getTime() - Date.now());
+    res.cookie(SESSION_COOKIE, sessionInfo.sessionToken, buildCookieOptions(maxAge));
+
+    if (sessionInfo.refreshToken) {
+      res.cookie(
+        REFRESH_COOKIE,
+        sessionInfo.refreshToken,
+        buildCookieOptions(REFRESH_COOKIE_MAX_AGE_MS),
+      );
+    }
+  }
+
+  private clearSessionCookies(req: Request, res: Response): void {
+    if (req.cookies?.[SESSION_COOKIE]) {
+      res.clearCookie(SESSION_COOKIE, buildCookieOptions());
+    }
+
+    if (req.cookies?.[REFRESH_COOKIE]) {
+      res.clearCookie(REFRESH_COOKIE, buildCookieOptions());
+    }
+  }
 
   private assertInternalServiceRequest(serviceToken?: string): void {
     const expectedToken = process.env.INTERNAL_SERVICE_TOKEN?.trim();
@@ -126,24 +157,12 @@ export class AuthController {
 
     if (finalType === 'magic_link') {
       const sessionInfo = await this.authService.authenticateMagicLink(authenticateDto.token);
-      const maxAge = Math.max(0, sessionInfo.expiresAt.getTime() - Date.now());
-      console.log(
-        '[Authenticate] Magic link authenticated. Setting cookie with maxAge:',
-        Math.floor(maxAge / 1000 / 60),
-        'minutes',
-      );
-      res.cookie(SESSION_COOKIE, sessionInfo.sessionToken, buildCookieOptions(maxAge));
+      this.setSessionCookies(res, sessionInfo);
       return toUserPayload(sessionInfo);
     }
     if (finalType === 'session') {
       const sessionInfo = await this.authService.validateSession(authenticateDto.token);
-      const maxAge = Math.max(0, sessionInfo.expiresAt.getTime() - Date.now());
-      console.log(
-        '[Authenticate] Session validated. Setting cookie with maxAge:',
-        Math.floor(maxAge / 1000 / 60),
-        'minutes',
-      );
-      res.cookie(SESSION_COOKIE, sessionInfo.sessionToken, buildCookieOptions(maxAge));
+      this.setSessionCookies(res, sessionInfo);
       return toUserPayload(sessionInfo);
     }
     throw new BadRequestException('Invalid authentication type. Expected magic_link or session.');
@@ -165,8 +184,7 @@ export class AuthController {
     }
 
     const sessionInfo = await this.authService.authenticateMagicLink(callbackToken);
-    const maxAge = Math.max(0, sessionInfo.expiresAt.getTime() - Date.now());
-    res.cookie(SESSION_COOKIE, sessionInfo.sessionToken, buildCookieOptions(maxAge));
+    this.setSessionCookies(res, sessionInfo);
     return toUserPayload(sessionInfo);
   }
 
@@ -186,7 +204,7 @@ export class AuthController {
     }
 
     const result = await this.authService.logout(token);
-    res.clearCookie(SESSION_COOKIE, buildCookieOptions());
+    this.clearSessionCookies(req, res);
     return result;
   }
 
@@ -201,21 +219,41 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const token = extractToken(authorization, req);
+    const refreshToken = extractRefreshToken(req);
     if (!token) {
-      if (req.cookies?.[SESSION_COOKIE]) {
-        res.clearCookie(SESSION_COOKIE, buildCookieOptions());
+      if (refreshToken) {
+        try {
+          const refreshedSession = await this.authService.refreshSession(refreshToken);
+          this.setSessionCookies(res, refreshedSession);
+          return toUserPayload(refreshedSession);
+        } catch {
+          this.clearSessionCookies(req, res);
+        }
       }
+
+      this.clearSessionCookies(req, res);
       throw new UnauthorizedException('No authorization header or cookie provided');
     }
 
     try {
       const sessionInfo = await this.authService.validateSession(token);
       return toUserPayload(sessionInfo);
-    } catch (error) {
-      if (!authorization && req.cookies?.[SESSION_COOKIE]) {
-        res.clearCookie(SESSION_COOKIE, buildCookieOptions());
+    } catch {
+      if (refreshToken) {
+        try {
+          const refreshedSession = await this.authService.refreshSession(refreshToken);
+          this.setSessionCookies(res, refreshedSession);
+          return toUserPayload(refreshedSession);
+        } catch {
+          this.clearSessionCookies(req, res);
+        }
       }
-      throw error;
+
+      if (!authorization) {
+        this.clearSessionCookies(req, res);
+      }
+
+      throw new UnauthorizedException('Invalid or expired session');
     }
   }
 
@@ -230,6 +268,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const token = extractToken(authorization, req);
+    const refreshToken = extractRefreshToken(req);
 
     console.log(
       '[Validate] Checking session. Has cookie:',
@@ -240,10 +279,21 @@ export class AuthController {
 
     if (!token) {
       console.log('[Validate] No token found, returning 401');
-      // Clear any stale cookie so the browser stops sending it
-      if (req.cookies?.[SESSION_COOKIE]) {
-        res.clearCookie(SESSION_COOKIE, buildCookieOptions());
+      if (refreshToken) {
+        try {
+          const refreshedSession = await this.authService.refreshSession(refreshToken);
+          this.setSessionCookies(res, refreshedSession);
+          return {
+            valid: true,
+            user: toUserPayload(refreshedSession),
+            expiresAt: refreshedSession.expiresAt,
+          };
+        } catch {
+          this.clearSessionCookies(req, res);
+        }
       }
+
+      this.clearSessionCookies(req, res);
       throw new UnauthorizedException('No authorization header or cookie provided');
     }
 
@@ -251,13 +301,26 @@ export class AuthController {
       const sessionInfo = await this.authService.validateSession(token);
       console.log('[Validate] Session valid. Expires at:', sessionInfo.expiresAt);
       return { valid: true, user: toUserPayload(sessionInfo), expiresAt: sessionInfo.expiresAt };
-    } catch (error) {
-      // If the invalid token came from the cookie, expire it now so the browser
-      // stops sending it on every subsequent request.
-      if (!authorization && req.cookies?.[SESSION_COOKIE]) {
-        res.clearCookie(SESSION_COOKIE, buildCookieOptions());
+    } catch {
+      if (refreshToken) {
+        try {
+          const refreshedSession = await this.authService.refreshSession(refreshToken);
+          this.setSessionCookies(res, refreshedSession);
+          return {
+            valid: true,
+            user: toUserPayload(refreshedSession),
+            expiresAt: refreshedSession.expiresAt,
+          };
+        } catch {
+          this.clearSessionCookies(req, res);
+        }
       }
-      throw error;
+
+      if (!authorization) {
+        this.clearSessionCookies(req, res);
+      }
+
+      throw new UnauthorizedException('Invalid or expired session');
     }
   }
 }

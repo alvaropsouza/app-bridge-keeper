@@ -77,6 +77,7 @@ export class EnsureUserDto {
 
 export interface SessionInfo {
   sessionToken: string;
+  refreshToken?: string;
   userId: string;
   email?: string;
   name?: string;
