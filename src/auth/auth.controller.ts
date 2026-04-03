@@ -69,8 +69,10 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   private setSessionCookies(res: Response, sessionInfo: SessionInfo): void {
-    const maxAge = Math.max(0, sessionInfo.expiresAt.getTime() - Date.now());
-    res.cookie(SESSION_COOKIE, sessionInfo.sessionToken, buildCookieOptions(maxAge));
+    // Per Supabase docs: cookie lifetime must outlive the JWT expiry so the
+    // browser always sends an (expired) access token for the backend to refresh.
+    // https://supabase.com/docs/guides/auth/sessions#using-http-only-cookies
+    res.cookie(SESSION_COOKIE, sessionInfo.sessionToken, buildCookieOptions(REFRESH_COOKIE_MAX_AGE_MS));
 
     if (sessionInfo.refreshToken) {
       res.cookie(
