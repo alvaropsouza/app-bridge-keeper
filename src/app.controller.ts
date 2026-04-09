@@ -20,7 +20,9 @@ export class AppController {
   getHealth() {
     return {
       status: 'ok',
+      service: 'app-bridge-keeper',
       timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
     };
   }
 }
