@@ -1,7 +1,7 @@
-import { HttpStatus, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import * as stytch from 'stytch';
 import type { StytchConfig } from 'src/config/stytch.config';
-import type { AuthProvider, LoginRequestResult } from './auth-provider.interface';
+import type { AuthProvider, LoginRequestResult, SocialProvider } from './auth-provider.interface';
 import type { SessionInfo } from './dto/auth.dto';
 
 @Injectable()
@@ -70,6 +70,10 @@ export class StytchAuthAdapter implements AuthProvider {
         code: error?.status_code ?? HttpStatus.UNAUTHORIZED,
       });
     }
+  }
+
+  async getOAuthAuthorizationUrl(_provider: SocialProvider): Promise<string> {
+    throw new BadRequestException('OAuth social login is not supported for the configured provider');
   }
 
   async authenticateMagicLink(token: string): Promise<SessionInfo> {

@@ -30,6 +30,15 @@ export class AuthenticateDto {
   token: string;
 
   @ApiProperty({
+    description: 'Refresh token returned by OAuth providers like Supabase',
+    example: 'refresh_token_123abc...',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  refreshToken?: string;
+
+  @ApiProperty({
     description:
       'Type of authentication (optional if auto-detect). Accepted values: magic_link, session',
     enum: ['magic_link', 'session'],

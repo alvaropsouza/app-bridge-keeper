@@ -127,6 +127,13 @@ export class AuthController {
     return this.authService.initiateLogin(loginDto);
   }
 
+  @Get('oauth/google/url')
+  @ApiOperation({ summary: 'Generate the Google OAuth URL for the configured auth provider' })
+  @ApiResponse({ status: 200, description: 'OAuth URL generated successfully' })
+  async getGoogleOAuthUrl() {
+    return this.authService.getGoogleAuthorizationUrl();
+  }
+
   @Post('ensure-user')
   @ApiOperation({ summary: 'Ensure user exists in the configured auth provider by email' })
   @ApiResponse({ status: 201, description: 'User exists in the configured auth provider' })
@@ -168,6 +175,9 @@ export class AuthController {
     }
     if (finalType === 'session') {
       const sessionInfo = await this.authService.validateSession(authenticateDto.token);
+      if (authenticateDto.refreshToken) {
+        sessionInfo.refreshToken = authenticateDto.refreshToken;
+      }
       this.setSessionCookies(res, sessionInfo);
       return toUserPayload(sessionInfo);
     }

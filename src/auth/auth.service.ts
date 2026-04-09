@@ -7,6 +7,7 @@ import { AuthenticateMagicLinkUseCase } from './use-cases/authenticate-magic-lin
 import { ValidateSessionUseCase } from './use-cases/validate-session.use-case';
 import { LogoutUseCase } from './use-cases/logout.use-case';
 import { RefreshSessionUseCase } from './use-cases/refresh-session.use-case';
+import { GetOAuthAuthorizationUrlUseCase } from './use-cases/get-oauth-authorization-url.use-case';
 
 @Injectable()
 export class AuthService {
@@ -20,6 +21,7 @@ export class AuthService {
     private readonly validateSessionUseCase: ValidateSessionUseCase,
     private readonly refreshSessionUseCase: RefreshSessionUseCase,
     private readonly logoutUseCase: LogoutUseCase,
+    private readonly getOAuthAuthorizationUrlUseCase: GetOAuthAuthorizationUrlUseCase,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -85,6 +87,26 @@ export class AuthService {
         throw error;
       }
       throw new UnauthorizedException('Unable to initiate login');
+    }
+  }
+
+  async getGoogleAuthorizationUrl() {
+    this.logger.log('Google OAuth URL requested');
+
+    try {
+      const url = await this.getOAuthAuthorizationUrlUseCase.execute('google');
+
+      return {
+        success: true,
+        url,
+      };
+    } catch (error) {
+      const message = this.getErrorMessage(error);
+      this.logger.error(`Google OAuth URL generation failed: ${message}`);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Unable to start Google login');
     }
   }
 

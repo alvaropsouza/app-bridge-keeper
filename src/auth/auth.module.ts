@@ -12,6 +12,7 @@ import { AuthenticateMagicLinkUseCase } from './use-cases/authenticate-magic-lin
 import { ValidateSessionUseCase } from './use-cases/validate-session.use-case';
 import { LogoutUseCase } from './use-cases/logout.use-case';
 import { RefreshSessionUseCase } from './use-cases/refresh-session.use-case';
+import { GetOAuthAuthorizationUrlUseCase } from './use-cases/get-oauth-authorization-url.use-case';
 
 @Module({
   imports: [ConfigModule],
@@ -27,6 +28,7 @@ import { RefreshSessionUseCase } from './use-cases/refresh-session.use-case';
     ValidateSessionUseCase,
     RefreshSessionUseCase,
     LogoutUseCase,
+    GetOAuthAuthorizationUrlUseCase,
     {
       provide: AUTH_PROVIDER,
       useFactory: (authProviderFactory: AuthProviderFactory): AuthProvider =>

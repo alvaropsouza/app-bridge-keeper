@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { SupabaseConfig } from 'src/config/supabase.config';
-import type { AuthProvider, LoginRequestResult } from './auth-provider.interface';
+import type { AuthProvider, LoginRequestResult, SocialProvider } from './auth-provider.interface';
 import type { SessionInfo } from './dto/auth.dto';
 
 @Injectable()
@@ -123,6 +123,26 @@ export class SupabaseAuthAdapter implements AuthProvider {
     return {
       requestId: `supabase-${Date.now()}`,
     };
+  }
+
+  async getOAuthAuthorizationUrl(provider: SocialProvider): Promise<string> {
+    const redirectTo = this.config.frontendUrl || process.env.FRONTEND_URL;
+    const { data, error } = await this.publishableClient.auth.signInWithOAuth({
+      provider,
+      options: {
+        ...(redirectTo ? { redirectTo } : {}),
+        skipBrowserRedirect: true,
+      },
+    });
+
+    if (error || !data?.url) {
+      throw new UnauthorizedException({
+        message: error?.message || 'Unable to start OAuth authentication',
+        code: HttpStatus.BAD_GATEWAY,
+      });
+    }
+
+    return data.url;
   }
 
   async authenticateMagicLink(token: string): Promise<SessionInfo> {
