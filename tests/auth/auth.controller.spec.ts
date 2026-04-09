@@ -3,6 +3,15 @@ import { UnauthorizedException } from '@nestjs/common';
 import { AuthController } from 'src/auth/auth.controller';
 import { AuthService } from 'src/auth/auth.service';
 
+const createMockResponse = () => ({
+  cookie: jest.fn(),
+  clearCookie: jest.fn(),
+});
+
+const createMockRequest = (cookieToken?: string) => ({
+  cookies: cookieToken ? { kab_session: cookieToken } : {},
+});
+
 describe('AuthController', () => {
   let controller: AuthController;
 
@@ -62,20 +71,23 @@ describe('AuthController', () => {
       const authenticateDto = {
         token: 'magic-link-token',
       };
+      const response = createMockResponse();
 
       const mockResult = {
         sessionToken: 'session-token',
-        memberId: 'member-123',
-        organizationId: 'org-123',
+        userId: 'user-123',
+        email: 'test@example.com',
+        name: 'Test',
         expiresAt: new Date(),
       };
 
       mockAuthService.authenticateMagicLink.mockResolvedValue(mockResult);
 
-      const result = await controller.authenticate(authenticateDto);
+      const result = await controller.authenticate(authenticateDto, response as any);
 
       expect(result).toEqual(mockResult);
       expect(mockAuthService.authenticateMagicLink).toHaveBeenCalledWith(authenticateDto.token);
+      expect(response.cookie).toHaveBeenCalled();
     });
 
     it('should authenticate with session token', async () => {
@@ -83,20 +95,23 @@ describe('AuthController', () => {
         token: 'session-token',
         type: 'session' as const,
       };
+      const response = createMockResponse();
 
       const mockResult = {
         sessionToken: 'session-token',
-        memberId: 'member-123',
-        organizationId: 'org-123',
+        userId: 'user-123',
+        email: 'test@example.com',
+        name: 'Test',
         expiresAt: new Date(),
       };
 
       mockAuthService.validateSession.mockResolvedValue(mockResult);
 
-      const result = await controller.authenticate(authenticateDto);
+      const result = await controller.authenticate(authenticateDto, response as any);
 
       expect(result).toEqual(mockResult);
       expect(mockAuthService.validateSession).toHaveBeenCalledWith(authenticateDto.token);
+      expect(response.cookie).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException for invalid type', async () => {
@@ -105,9 +120,9 @@ describe('AuthController', () => {
         type: 'invalid' as any,
       };
 
-      await expect(controller.authenticate(authenticateDto)).rejects.toThrow(
-        'Invalid authentication type',
-      );
+      await expect(
+        controller.authenticate(authenticateDto, createMockResponse() as any),
+      ).rejects.toThrow('Invalid authentication type');
     });
   });
 
@@ -118,17 +133,22 @@ describe('AuthController', () => {
         success: true,
         message: 'Session revoked successfully',
       };
+      const request = createMockRequest();
+      const response = createMockResponse();
 
       mockAuthService.logout.mockResolvedValue(mockResult);
 
-      const result = await controller.logout(authorization);
+      const result = await controller.logout(authorization, request as any, response as any);
 
       expect(result).toEqual(mockResult);
       expect(mockAuthService.logout).toHaveBeenCalledWith('session-token');
+      expect(response.clearCookie).toHaveBeenCalled();
     });
 
     it('should throw UnauthorizedException when no authorization header', async () => {
-      await expect(controller.logout('')).rejects.toThrow(UnauthorizedException);
+      await expect(
+        controller.logout('', createMockRequest() as any, createMockResponse() as any),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -138,15 +158,19 @@ describe('AuthController', () => {
       const mockSession = {
         sessionToken: 'session-token',
         userId: 'user-123',
+        email: 'test@example.com',
+        name: 'Test',
         expiresAt: new Date(),
       };
       mockAuthService.validateSession.mockResolvedValue(mockSession);
-      const result = await controller.getMe(authorization);
+      const result = await controller.getMe(authorization, createMockRequest() as any);
       expect(result).toEqual(mockSession);
       expect(mockAuthService.validateSession).toHaveBeenCalledWith('session-token');
     });
     it('should throw UnauthorizedException when no authorization header', async () => {
-      await expect(controller.getMe('')).rejects.toThrow(UnauthorizedException);
+      await expect(controller.getMe('', createMockRequest() as any)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
@@ -156,16 +180,20 @@ describe('AuthController', () => {
       const mockResult = {
         sessionToken: 'session-token',
         userId: 'user-123',
+        email: 'test@example.com',
+        name: 'Test',
         expiresAt: new Date(),
       };
       mockAuthService.validateSession.mockResolvedValue(mockResult);
-      const result = await controller.validateSession(authorization);
+      const result = await controller.validateSession(authorization, createMockRequest() as any);
       expect(result.valid).toBe(true);
-      expect(result.session).toEqual(mockResult);
+      expect(result.user).toEqual(mockResult);
       expect(mockAuthService.validateSession).toHaveBeenCalledWith('session-token');
     });
     it('should throw UnauthorizedException when no authorization header', async () => {
-      await expect(controller.validateSession('')).rejects.toThrow(UnauthorizedException);
+      await expect(controller.validateSession('', createMockRequest() as any)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 });

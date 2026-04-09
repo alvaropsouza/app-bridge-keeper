@@ -8,6 +8,7 @@ describe('StytchService', () => {
   const mockConfig = {
     projectId: 'test-project-id',
     secret: 'test-secret',
+    frontendUrl: 'http://localhost:5173',
   };
 
   beforeEach(async () => {
@@ -34,7 +35,11 @@ describe('StytchService', () => {
 
   describe('sendMagicLink', () => {
     it('should throw error when client is not initialized', async () => {
-      const serviceWithoutClient = new StytchService({ projectId: '', secret: '' });
+      const serviceWithoutClient = new StytchService({
+        projectId: '',
+        secret: '',
+        frontendUrl: '',
+      });
       await expect(serviceWithoutClient.sendMagicLink('test@example.com')).rejects.toThrow(
         'Stytch client not initialized',
       );
@@ -43,7 +48,11 @@ describe('StytchService', () => {
 
   describe('authenticateMagicLink', () => {
     it('should throw error when client is not initialized', async () => {
-      const serviceWithoutClient = new StytchService({ projectId: '', secret: '' });
+      const serviceWithoutClient = new StytchService({
+        projectId: '',
+        secret: '',
+        frontendUrl: '',
+      });
       await expect(serviceWithoutClient.authenticateMagicLink('token-123')).rejects.toThrow(
         'Stytch client not initialized',
       );
@@ -52,7 +61,11 @@ describe('StytchService', () => {
 
   describe('authenticateSession', () => {
     it('should throw error when client is not initialized', async () => {
-      const serviceWithoutClient = new StytchService({ projectId: '', secret: '' });
+      const serviceWithoutClient = new StytchService({
+        projectId: '',
+        secret: '',
+        frontendUrl: '',
+      });
       await expect(serviceWithoutClient.authenticateSession('token-123')).rejects.toThrow(
         'Stytch client not initialized',
       );
@@ -61,7 +74,11 @@ describe('StytchService', () => {
 
   describe('revokeSession', () => {
     it('should throw error when client is not initialized', async () => {
-      const serviceWithoutClient = new StytchService({ projectId: '', secret: '' });
+      const serviceWithoutClient = new StytchService({
+        projectId: '',
+        secret: '',
+        frontendUrl: '',
+      });
       await expect(serviceWithoutClient.revokeSession('token-123')).rejects.toThrow(
         'Stytch client not initialized',
       );

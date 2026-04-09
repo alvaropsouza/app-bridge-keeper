@@ -50,7 +50,7 @@ describe('AuthService', () => {
       expect(result.success).toBe(true);
       expect(result.message).toBe('Magic link sent successfully');
       expect(result.requestId).toBe('req-123');
-      expect(mockStytchService.sendMagicLink).toHaveBeenCalledWith(loginDto.email);
+      expect(mockStytchService.sendMagicLink).toHaveBeenCalledWith(loginDto.email, undefined);
     });
 
     it('should throw UnauthorizedException on failure', async () => {

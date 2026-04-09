@@ -2,9 +2,11 @@ import {
   Injectable,
   Inject,
   Logger,
-  UnauthorizedException,
-  HttpStatus,
   NotFoundException,
+  BadGatewayException,
+  HttpException,
+  InternalServerErrorException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import * as stytch from 'stytch';
 import { STYTCH_CONFIG } from '../config/stytch.config';
@@ -31,7 +33,11 @@ export class StytchService {
 
   async sendMagicLink(email: string, locale?: MagicLinkLocale) {
     if (!this.client) {
-      throw new Error('Stytch client not initialized');
+      throw new ServiceUnavailableException('Stytch client not initialized');
+    }
+
+    if (!this.config.frontendUrl) {
+      throw new InternalServerErrorException('FRONTEND_URL not configured');
     }
 
     const getUserByEmailQuery: stytch.UsersSearchRequest = {
@@ -47,7 +53,6 @@ export class StytchService {
     };
 
     try {
-      const redirectUrl = process.env.FRONTEND_URL;
       const user = await this.client.users.search(getUserByEmailQuery);
 
       const noUsersFound = user.results.length === 0;
@@ -55,7 +60,7 @@ export class StytchService {
         throw new NotFoundException({ message: `User with email ${email} not found` });
       }
 
-      const login_magic_link_url = redirectUrl;
+      const login_magic_link_url = this.config.frontendUrl;
       const resolvedLocale = this.resolveLocale(locale);
       const response = await this.client.magicLinks.email.loginOrCreate({
         signup_expiration_minutes: 5,
@@ -70,16 +75,17 @@ export class StytchService {
 
       return response;
     } catch (error) {
-      throw new UnauthorizedException({
-        message: error?.response?.message ?? `Failed to send magic link ${JSON.stringify(error)}`,
-        code: error?.status ?? HttpStatus.UNAUTHORIZED,
-      });
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new BadGatewayException(this.getProviderMessage(error, 'Failed to send magic link'));
     }
   }
 
   async authenticateMagicLink(token: string) {
     if (!this.client) {
-      throw new Error('Stytch client not initialized');
+      throw new ServiceUnavailableException('Stytch client not initialized');
     }
 
     try {
@@ -87,36 +93,42 @@ export class StytchService {
         token,
         session_duration_minutes: 43200,
       });
-      this.logger.log('Magic link authenticated (30-day session)');
-      this.logger.debug('Magic link response:', JSON.stringify(response, null, 2));
+      this.logger.log(`Magic link authenticated for user ${response.user_id}`);
       return response;
     } catch (error) {
-      this.logger.error(`Failed to authenticate magic link: ${error.message}`);
-      throw error;
+      this.logger.error(
+        `Failed to authenticate magic link: ${this.getProviderMessage(error, 'Unknown error')}`,
+      );
+      throw new BadGatewayException(
+        this.getProviderMessage(error, 'Failed to authenticate magic link'),
+      );
     }
   }
 
   async authenticateSession(sessionToken: string) {
     if (!this.client) {
-      throw new Error('Stytch client not initialized');
+      throw new ServiceUnavailableException('Stytch client not initialized');
     }
 
     try {
       const response = await this.client.sessions.authenticate({
         session_token: sessionToken,
       });
-      this.logger.log('Session authenticated successfully');
-      this.logger.debug('Session response:', JSON.stringify(response, null, 2));
+      this.logger.log(`Session authenticated for user ${response.user.user_id}`);
       return response;
     } catch (error) {
-      this.logger.error(`Failed to authenticate session: ${error.message}`);
-      throw error;
+      this.logger.error(
+        `Failed to authenticate session: ${this.getProviderMessage(error, 'Unknown error')}`,
+      );
+      throw new BadGatewayException(
+        this.getProviderMessage(error, 'Failed to authenticate session'),
+      );
     }
   }
 
   async revokeSession(sessionToken: string) {
     if (!this.client) {
-      throw new Error('Stytch client not initialized');
+      throw new ServiceUnavailableException('Stytch client not initialized');
     }
 
     try {
@@ -126,8 +138,10 @@ export class StytchService {
       this.logger.log('Session revoked successfully');
       return response;
     } catch (error) {
-      this.logger.error(`Failed to revoke session: ${error.message}`);
-      throw error;
+      this.logger.error(
+        `Failed to revoke session: ${this.getProviderMessage(error, 'Unknown error')}`,
+      );
+      throw new BadGatewayException(this.getProviderMessage(error, 'Failed to revoke session'));
     }
   }
 
@@ -142,5 +156,18 @@ export class StytchService {
     }
 
     return MagicLinkLocale.EN;
+  }
+
+  private getProviderMessage(error: unknown, fallback: string): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    const responseMessage = (error as { response?: { message?: string } })?.response?.message;
+    if (responseMessage) {
+      return responseMessage;
+    }
+
+    return fallback;
   }
 }

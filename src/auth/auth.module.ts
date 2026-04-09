@@ -16,6 +16,7 @@ import { STYTCH_CONFIG } from '../config/stytch.config';
       useFactory: (configService: ConfigService) => ({
         projectId: configService.get<string>('STYTCH_PROJECT_ID'),
         secret: configService.get<string>('STYTCH_SECRET'),
+        frontendUrl: configService.get<string>('FRONTEND_URL'),
       }),
       inject: [ConfigService],
     },

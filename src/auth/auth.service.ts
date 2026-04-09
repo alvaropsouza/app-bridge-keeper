@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger, HttpException } from '@nestjs/common';
 import { StytchService } from './stytch.service';
 import { LoginDto, SessionInfo } from './dto/auth.dto';
 
@@ -18,7 +18,11 @@ export class AuthService {
         requestId: result.request_id,
       };
     } catch (error) {
-      this.logger.error(`Login initiation failed: ${error.message}`);
+      const message = this.getErrorMessage(error);
+      this.logger.error(`Login initiation failed: ${message}`);
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new UnauthorizedException('Unable to initiate login');
     }
   }
@@ -43,7 +47,11 @@ export class AuthService {
         expiresAt: sessionExpiresAt,
       };
     } catch (error) {
-      this.logger.error(`Magic link authentication failed: ${error.message}`);
+      const message = this.getErrorMessage(error);
+      this.logger.error(`Magic link authentication failed: ${message}`);
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new UnauthorizedException('Invalid or expired magic link');
     }
   }
@@ -63,7 +71,11 @@ export class AuthService {
         expiresAt: session.expires_at ? new Date(session.expires_at) : new Date(),
       };
     } catch (error) {
-      this.logger.error(`Session validation failed: ${error.message}`);
+      const message = this.getErrorMessage(error);
+      this.logger.error(`Session validation failed: ${message}`);
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new UnauthorizedException('Invalid or expired session');
     }
   }
@@ -77,8 +89,20 @@ export class AuthService {
         message: 'Session revoked successfully',
       };
     } catch (error) {
-      this.logger.error(`Logout failed: ${error.message}`);
+      const message = this.getErrorMessage(error);
+      this.logger.error(`Logout failed: ${message}`);
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new UnauthorizedException('Failed to revoke session');
     }
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return 'Unknown error';
   }
 }
