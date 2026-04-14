@@ -3,9 +3,9 @@ import { AUTH_PROVIDER, type AuthProvider, type SocialProvider } from '../auth-p
 
 @Injectable()
 export class GetOAuthAuthorizationUrlUseCase {
-  constructor(@Inject(AUTH_PROVIDER) private readonly authProvider: AuthProvider) {}
+	constructor(@Inject(AUTH_PROVIDER) private readonly authProvider: AuthProvider) {}
 
-  async execute(provider: SocialProvider): Promise<string> {
-    return this.authProvider.getOAuthAuthorizationUrl(provider);
-  }
+	async execute(provider: SocialProvider): Promise<string> {
+		return this.authProvider.getOAuthAuthorizationUrl(provider);
+	}
 }

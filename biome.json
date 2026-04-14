@@ -4,6 +4,13 @@
 		"includes": ["src/**/*.ts", "test/**/*.ts", "e2e/**/*.ts"],
 		"ignoreUnknown": true
 	},
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab",
