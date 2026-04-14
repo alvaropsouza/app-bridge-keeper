@@ -14,6 +14,7 @@
 ## Build e execucao
 
 - Instalar dependencias com `pnpm install`.
+- Sempre executar `pnpm install` apos mudancas para manter `pnpm-lock.yaml` alinhado ao `package.json` antes de deploy.
 - Executar e validar scripts conforme `package.json` local.
 
 ## Convencoes locais
