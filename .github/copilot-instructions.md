@@ -23,3 +23,4 @@
 
 - Manter consistencia com padroes NestJS e TypeScript ja adotados no projeto.
 - Evitar alteracoes de escopo fora deste repositorio sem necessidade explicita.
+- Usar sempre o sufixo `Request` em tipos/DTOs que representam dados enviados a uma API ou servico externo; nunca usar `Input` para esse fim.
