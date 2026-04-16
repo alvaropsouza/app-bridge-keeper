@@ -1,6 +1,5 @@
 const typescriptEslint = require('@typescript-eslint/eslint-plugin');
 const typescriptParser = require('@typescript-eslint/parser');
-const prettier = require('eslint-plugin-prettier');
 
 module.exports = [
   {
@@ -27,7 +26,6 @@ module.exports = [
     },
     plugins: {
       '@typescript-eslint': typescriptEslint,
-      prettier: prettier,
     },
     rules: {
       ...typescriptEslint.configs.recommended.rules,
@@ -58,7 +56,6 @@ module.exports = [
     },
     plugins: {
       '@typescript-eslint': typescriptEslint,
-      prettier: prettier,
     },
     rules: {
       ...typescriptEslint.configs.recommended.rules,
