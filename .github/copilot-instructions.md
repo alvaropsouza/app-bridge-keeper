@@ -15,6 +15,8 @@
 
 - Instalar dependencias com `pnpm install`.
 - Sempre executar `pnpm install` apos mudancas para manter `pnpm-lock.yaml` alinhado ao `package.json` antes de deploy.
+- `pnpm-lock.yaml` nunca deve estar no `.gitignore`.
+- O lockfile deve permanecer versionado para garantir reprodutibilidade de build, instalacao consistente no CI/CD e diagnostico correto de falhas de deploy.
 - Executar e validar scripts conforme `package.json` local.
 
 ## Convencoes locais
