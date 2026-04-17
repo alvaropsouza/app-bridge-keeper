@@ -1,3 +1,4 @@
+import { buildCommonCorsOptions, resolveCorsOriginsFromEnv } from '@alvaropsouza/soluciona-mei-lib';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -14,19 +15,11 @@ async function bootstrap() {
 	app.use(helmet());
 	app.use(cookieParser());
 
-	const corsOrigins = process.env.CORS_ORIGINS
-		? process.env.CORS_ORIGINS.split(',')
-				.map((o) => o.trim())
-				.filter(Boolean)
-		: ['http://localhost:3001'];
-
-	// Matches https://solucionamei.com and any single-level subdomain (e.g. app.solucionamei.com)
-	const solucionameiOriginRe = /^https:\/\/([a-zA-Z0-9-]+\.)?solucionamei\.com$/;
-
-	app.enableCors({
-		origin: [...corsOrigins, solucionameiOriginRe],
-		credentials: true,
-	});
+	app.enableCors(
+		buildCommonCorsOptions({
+			configuredOrigins: resolveCorsOriginsFromEnv(process.env.CORS_ORIGINS),
+		}),
+	);
 
 	app.useGlobalPipes(
 		new ValidationPipe({
