@@ -20,8 +20,11 @@ async function bootstrap() {
 				.filter(Boolean)
 		: ['http://localhost:3001'];
 
+	// Matches https://solucionamei.com and any single-level subdomain (e.g. app.solucionamei.com)
+	const solucionameiOriginRe = /^https:\/\/([a-zA-Z0-9-]+\.)?solucionamei\.com$/;
+
 	app.enableCors({
-		origin: corsOrigins,
+		origin: [...corsOrigins, solucionameiOriginRe],
 		credentials: true,
 	});
 
