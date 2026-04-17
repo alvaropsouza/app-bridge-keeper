@@ -1,4 +1,3 @@
-import { buildCommonCorsOptions, resolveCorsOriginsFromEnv } from '@alvaropsouza/soluciona-mei-lib';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -15,11 +14,17 @@ async function bootstrap() {
 	app.use(helmet());
 	app.use(cookieParser());
 
-	app.enableCors(
-		buildCommonCorsOptions({
-			configuredOrigins: resolveCorsOriginsFromEnv(process.env.CORS_ORIGINS),
-		}),
-	);
+	// Bridge Keeper has no shared lib dependency - CORS configured independently
+	const corsOrigins = process.env.CORS_ORIGINS?.split(',')
+		.map((o) => o.trim())
+		.filter((o) => o.length > 0) || ['http://localhost:3001'];
+
+	app.enableCors({
+		origin: corsOrigins,
+		credentials: true,
+		methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+		allowedHeaders: ['Content-Type', 'Authorization'],
+	});
 
 	app.useGlobalPipes(
 		new ValidationPipe({
