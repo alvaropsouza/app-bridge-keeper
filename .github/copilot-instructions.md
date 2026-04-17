@@ -27,3 +27,8 @@
 - O `app-bridge-keeper` nao deve depender da `@alvaropsouza/soluciona-mei-lib`.
 - Nao adicionar `@alvaropsouza/soluciona-mei-lib` no `package.json` deste projeto.
 
+## Controle de versao
+
+- NUNCA fazer commits automaticamente sem revisao do usuario.
+- Sempre deixar as mudancas em estado de uncommitted para revisao antes de qualquer operacao de versionamento.
+
