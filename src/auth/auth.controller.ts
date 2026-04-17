@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import {
 	BadRequestException,
 	Body,
@@ -35,11 +36,6 @@ const buildCookieOptions = (maxAge?: number) => {
 		path: '/',
 		...(maxAge ? { maxAge } : {}),
 	};
-
-	console.log('[Cookie] Building cookie options:', {
-		...options,
-		maxAge: maxAge ? `${Math.floor(maxAge / 1000 / 60)} minutes` : 'session',
-	});
 
 	return options;
 };
@@ -104,7 +100,17 @@ export class AuthController {
 			throw new ForbiddenException('INTERNAL_SERVICE_TOKEN is not configured');
 		}
 
-		if (!serviceToken || serviceToken !== expectedToken) {
+		if (!serviceToken) {
+			throw new UnauthorizedException('Invalid internal service token');
+		}
+
+		const expectedBuffer = Buffer.from(expectedToken, 'utf8');
+		const receivedBuffer = Buffer.from(serviceToken, 'utf8');
+
+		if (
+			expectedBuffer.length !== receivedBuffer.length ||
+			!timingSafeEqual(expectedBuffer, receivedBuffer)
+		) {
 			throw new UnauthorizedException('Invalid internal service token');
 		}
 	}
@@ -286,15 +292,7 @@ export class AuthController {
 		const token = extractToken(authorization, req);
 		const refreshToken = extractRefreshToken(req);
 
-		console.log(
-			'[Validate] Checking session. Has cookie:',
-			!!req.cookies?.[SESSION_COOKIE],
-			'Has auth header:',
-			!!authorization,
-		);
-
 		if (!token) {
-			console.log('[Validate] No token found, returning 401');
 			if (refreshToken) {
 				try {
 					const refreshedSession = await this.authService.refreshSession(refreshToken);
@@ -315,7 +313,6 @@ export class AuthController {
 
 		try {
 			const sessionInfo = await this.authService.validateSession(token);
-			console.log('[Validate] Session valid. Expires at:', sessionInfo.expiresAt);
 			return { valid: true, user: toUserPayload(sessionInfo), expiresAt: sessionInfo.expiresAt };
 		} catch {
 			if (refreshToken) {
